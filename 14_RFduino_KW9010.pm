@@ -1,0 +1,1 @@
+/opt/fhem/FHEM/14_RFduino_KW9010.pm
