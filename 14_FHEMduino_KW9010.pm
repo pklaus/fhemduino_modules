@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 14_RFduino_KW9010.pm 3818 2013-09-22 $
+# $Id: 14_FHEMduino_KW9010.pm 3818 2013-09-22 $
 package main;
 
 use strict;
@@ -12,7 +12,7 @@ use warnings;
 
 #####################################
 sub
-RFduino_KW9010_Initialize($)
+FHEMduino_KW9010_Initialize($)
 {
   my ($hash) = @_;
 
@@ -26,46 +26,46 @@ RFduino_KW9010_Initialize($)
   #   HH = Humidity
 
   $hash->{Match}     = "^K...........";
-  $hash->{DefFn}     = "RFduino_KW9010_Define";
-  $hash->{UndefFn}   = "RFduino_KW9010_Undef";
-  $hash->{AttrFn}    = "RFduino_KW9010_Attr";
-  $hash->{ParseFn}   = "RFduino_KW9010_Parse";
+  $hash->{DefFn}     = "FHEMduino_KW9010_Define";
+  $hash->{UndefFn}   = "FHEMduino_KW9010_Undef";
+  $hash->{AttrFn}    = "FHEMduino_KW9010_Attr";
+  $hash->{ParseFn}   = "FHEMduino_KW9010_Parse";
   $hash->{AttrList}  = "IODev do_not_notify:0,1 showtime:0,1 ignore:0,1 ".$readingFnAttributes;
 }
 
 
 #####################################
 sub
-RFduino_KW9010_Define($$)
+FHEMduino_KW9010_Define($$)
 {
   my ($hash, $def) = @_;
   my @a = split("[ \t][ \t]*", $def);
 
-  return "wrong syntax: define <name> RFduino_KW9010 <code>".int(@a)
+  return "wrong syntax: define <name> FHEMduino_KW9010 <code>".int(@a)
   if(int(@a) != 3);
 
   #return "Define $a[0]: wrong CODE format: valid is 1-8"
   #              if($a[2] !~ m/^[1-8]$/);
 
   $hash->{CODE} = $a[2];
-  $modules{RFduino_KW9010}{defptr}{$a[2]} = $hash;
+  $modules{FHEMduino_KW9010}{defptr}{$a[2]} = $hash;
   AssignIoPort($hash);
   return undef;
 }
 
 #####################################
 sub
-RFduino_KW9010_Undef($$)
+FHEMduino_KW9010_Undef($$)
 {
   my ($hash, $name) = @_;
-  delete($modules{RFduino_KW9010}{defptr}{$hash->{CODE}}) if($hash && $hash->{CODE});
+  delete($modules{FHEMduino_KW9010}{defptr}{$hash->{CODE}}) if($hash && $hash->{CODE});
   return undef;
 }
 
 
 #####################################
 sub
-RFduino_KW9010_Parse($$)
+FHEMduino_KW9010_Parse($$)
 {
   my ($hash,$msg) = @_;
   
@@ -79,11 +79,11 @@ RFduino_KW9010_Parse($$)
   
   my $deviceCode = $a[1].$a[2];
   
-  my $def = $modules{RFduino_KW9010}{defptr}{$hash->{NAME} . "." . $deviceCode};
-  $def = $modules{RFduino_KW9010}{defptr}{$deviceCode} if(!$def);
+  my $def = $modules{FHEMduino_KW9010}{defptr}{$hash->{NAME} . "." . $deviceCode};
+  $def = $modules{FHEMduino_KW9010}{defptr}{$deviceCode} if(!$def);
   if(!$def) {
-    Log3 $hash, 1, "RFduino_KW9010 UNDEFINED sensor detected, code $deviceCode";
-    return "UNDEFINED RFduino_KW9010_$deviceCode RFduino_KW9010 $deviceCode";
+    Log3 $hash, 1, "FHEMduino_KW9010 UNDEFINED sensor detected, code $deviceCode";
+    return "UNDEFINED FHEMduino_KW9010_$deviceCode FHEMduino_KW9010 $deviceCode";
   }
   
   $hash = $def;
@@ -117,30 +117,30 @@ RFduino_KW9010_Parse($$)
 
 
   if(!$val) {
-    Log3 $name, 1, "RFduino_KW9010 $deviceCode Cannot decode $msg";
+    Log3 $name, 1, "FHEMduino_KW9010 $deviceCode Cannot decode $msg";
     return "";
   }
   if ($hash->{lastReceive} && (time() - $hash->{lastReceive} < 300)) {
     if ($hash->{lastValues} && (abs(abs($hash->{lastValues}{temperature}) - abs($tmp)) > 5)) {
-      Log3 $name, 1, "RFduino_KW9010 $deviceCode Temperature jump too large";
+      Log3 $name, 1, "FHEMduino_KW9010 $deviceCode Temperature jump too large";
       return "";
     }
 
 
     if ($hash->{lastValues} && (abs(abs($hash->{lastValues}{humidity}) - abs($hum)) > 5)) {
-      Log3 $name, 1, "RFduino_KW9010 $deviceCode Humidity jump too large";
+      Log3 $name, 1, "FHEMduino_KW9010 $deviceCode Humidity jump too large";
       return "";
     }
   }
   else {
-    Log3 $name, 1, "RFduino_KW9010 $deviceCode Skipping override due to too large timedifference";
+    Log3 $name, 1, "FHEMduino_KW9010 $deviceCode Skipping override due to too large timedifference";
   }
   $hash->{lastReceive} = time();
   $hash->{lastValues}{temperature} = $tmp;
   $hash->{lastValues}{humidity} = $hum;
 
 
-  Log3 $name, 4, "RFduino_KW9010 $name: $val";
+  Log3 $name, 4, "FHEMduino_KW9010 $name: $val";
 
   readingsBeginUpdate($hash);
   readingsBulkUpdate($hash, "state", $val);
@@ -155,7 +155,7 @@ RFduino_KW9010_Parse($$)
 }
 
 sub
-RFduino_KW9010_Attr(@)
+FHEMduino_KW9010_Attr(@)
 {
   my @a = @_;
 
@@ -165,8 +165,8 @@ RFduino_KW9010_Attr(@)
   my $hash = $defs{$a[1]};
   my $iohash = $defs{$a[3]};
   my $cde = $hash->{CODE};
-  delete($modules{RFduino_KW9010}{defptr}{$cde});
-  $modules{RFduino_KW9010}{defptr}{$iohash->{NAME} . "." . $cde} = $hash;
+  delete($modules{FHEMduino_KW9010}{defptr}{$cde});
+  $modules{FHEMduino_KW9010}{defptr}{$iohash->{NAME} . "." . $cde} = $hash;
   return undef;
 }
 
@@ -176,16 +176,16 @@ RFduino_KW9010_Attr(@)
 =pod
 =begin html
 
-<a name="RFduino_KW9010"></a>
-<h3>RFduino_KW9010</h3>
+<a name="FHEMduino_KW9010"></a>
+<h3>FHEMduino_KW9010</h3>
 <ul>
-  The RFduino_KW9010 module interprets S300 type of messages received by the RFduino.
+  The FHEMduino_KW9010 module interprets S300 type of messages received by the FHEMduino.
   <br><br>
 
-  <a name="RFduino_KW9010define"></a>
+  <a name="FHEMduino_KW9010define"></a>
   <b>Define</b>
   <ul>
-    <code>define &lt;name&gt; RFduino_KW9010 &lt;code&gt; [corr1...corr4]</code> <br>
+    <code>define &lt;name&gt; FHEMduino_KW9010 &lt;code&gt; [corr1...corr4]</code> <br>
     <br>
     &lt;code&gt; is the code which must be set on the S300 device. Valid values
     are 1 through 8.<br>
@@ -195,13 +195,13 @@ RFduino_KW9010_Attr(@)
   </ul>
   <br>
 
-  <a name="RFduino_KW9010set"></a>
+  <a name="FHEMduino_KW9010set"></a>
   <b>Set</b> <ul>N/A</ul><br>
 
-  <a name="RFduino_KW9010get"></a>
+  <a name="FHEMduino_KW9010get"></a>
   <b>Get</b> <ul>N/A</ul><br>
 
-  <a name="RFduino_KW9010attr"></a>
+  <a name="FHEMduino_KW9010attr"></a>
   <b>Attributes</b>
   <ul>
     <li><a href="#IODev">IODev (!)</a></li>

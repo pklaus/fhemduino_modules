@@ -1,24 +1,24 @@
 ##############################################
-# $Id: 00_RFduino.pm mdorenka $
+# $Id: 00_FHEMduino.pm mdorenka $
 package main;
 
 use strict;
 use warnings;
 use Time::HiRes qw(gettimeofday);
 
-sub RFduino_Attr(@);
-sub RFduino_Clear($);
-sub RFduino_HandleCurRequest($$);
-sub RFduino_HandleWriteQueue($);
-sub RFduino_Parse($$$$);
-sub RFduino_Read($);
-sub RFduino_ReadAnswer($$$$);
-sub RFduino_Ready($);
-sub RFduino_Write($$$);
+sub FHEMduino_Attr(@);
+sub FHEMduino_Clear($);
+sub FHEMduino_HandleCurRequest($$);
+sub FHEMduino_HandleWriteQueue($);
+sub FHEMduino_Parse($$$$);
+sub FHEMduino_Read($);
+sub FHEMduino_ReadAnswer($$$$);
+sub FHEMduino_Ready($);
+sub FHEMduino_Write($$$);
 
-sub RFduino_SimpleWrite(@);
+sub FHEMduino_SimpleWrite(@);
 
-my %gets = (    # Name, Data to send to the RFduino, Regexp for the answer
+my %gets = (    # Name, Data to send to the FHEMduino, Regexp for the answer
   "version"  => ["V", '^V .*'],
   "raw"      => ["", '.*'],
   "uptime"   => ["t", '^[0-9A-F]{8}[\r\n]*$' ],
@@ -32,45 +32,45 @@ my %sets = (
   "time"      => ""
 );
 
-my $clientsSlowRF = ":IT:RFduino_EZ6:";
+my $clientsSlowRF = ":IT:FHEMduino_EZ6:";
 
 my %matchListSlowRF = (
     "1:IT"              => "^i......\$",
-    "2:RFduino_EZ6"     => "E...........\$",
-    "3:RFduino_KW9010"  => "K...........\$",
+    "2:FHEMduino_EZ6"     => "E...........\$",
+    "3:FHEMduino_KW9010"  => "K...........\$",
 );
 
 sub
-RFduino_Initialize($)
+FHEMduino_Initialize($)
 {
   my ($hash) = @_;
 
   require "$attr{global}{modpath}/FHEM/DevIo.pm";
 
 # Provider
-  $hash->{ReadFn}  = "RFduino_Read";
-  $hash->{WriteFn} = "RFduino_Write";
-  $hash->{ReadyFn} = "RFduino_Ready";
+  $hash->{ReadFn}  = "FHEMduino_Read";
+  $hash->{WriteFn} = "FHEMduino_Write";
+  $hash->{ReadyFn} = "FHEMduino_Ready";
 
 # Normal devices
-  $hash->{DefFn}   = "RFduino_Define";
-  $hash->{FingerprintFn} = "RFduino_FingerprintFn";
-  $hash->{UndefFn} = "RFduino_Undef";
-  $hash->{GetFn}   = "RFduino_Get";
-  $hash->{SetFn}   = "RFduino_Set";
-  $hash->{AttrFn}  = "RFduino_Attr";
+  $hash->{DefFn}   = "FHEMduino_Define";
+  $hash->{FingerprintFn} = "FHEMduino_FingerprintFn";
+  $hash->{UndefFn} = "FHEMduino_Undef";
+  $hash->{GetFn}   = "FHEMduino_Get";
+  $hash->{SetFn}   = "FHEMduino_Set";
+  $hash->{AttrFn}  = "FHEMduino_Attr";
   $hash->{AttrList}= "do_not_notify:1,0 dummy:1,0 showtime:1,0 sendpool addvaltrigger";
 
-  $hash->{ShutdownFn} = "RFduino_Shutdown";
+  $hash->{ShutdownFn} = "FHEMduino_Shutdown";
 
 }
 
 sub
-RFduino_FingerprintFn($$)
+FHEMduino_FingerprintFn($$)
 {
   my ($name, $msg) = @_;
  
-  # Store only the "relevant" part, as the RFduino won't compute the checksum
+  # Store only the "relevant" part, as the FHEMduino won't compute the checksum
   $msg = substr($msg, 8) if($msg =~ m/^81/ && length($msg) > 8);
  
   return ($name, $msg);
@@ -78,13 +78,13 @@ RFduino_FingerprintFn($$)
 
 #####################################
 sub
-RFduino_Define($$)
+FHEMduino_Define($$)
 {
   my ($hash, $def) = @_;
   my @a = split("[ \t][ \t]*", $def);
 
   if(@a != 3) {
-    my $msg = "wrong syntax: define <name> RFduino {none | devicename[\@baudrate] | devicename\@directio | hostname:port}";
+    my $msg = "wrong syntax: define <name> FHEMduino {none | devicename[\@baudrate] | devicename\@directio | hostname:port}";
     Log3 undef, 2, $msg;
     return $msg;
   }
@@ -105,13 +105,13 @@ RFduino_Define($$)
   }
   
   $hash->{DeviceName} = $dev;
-  my $ret = DevIo_OpenDev($hash, 0, "RFduino_DoInit");
+  my $ret = DevIo_OpenDev($hash, 0, "FHEMduino_DoInit");
   return $ret;
 }
 
 #####################################
 sub
-RFduino_Undef($$)
+FHEMduino_Undef($$)
 {
   my ($hash, $arg) = @_;
   my $name = $hash->{NAME};
@@ -127,27 +127,27 @@ RFduino_Undef($$)
       }
   }
 
-  RFduino_SimpleWrite($hash, "X00"); # Switch reception off, it may hang up the RFduino
+  FHEMduino_SimpleWrite($hash, "X00"); # Switch reception off, it may hang up the FHEMduino
   DevIo_CloseDev($hash); 
   return undef;
 }
 
 #####################################
 sub
-RFduino_Shutdown($)
+FHEMduino_Shutdown($)
 {
   my ($hash) = @_;
-  RFduino_SimpleWrite($hash, "X00");
+  FHEMduino_SimpleWrite($hash, "X00");
   return undef;
 }
 
 #####################################
 sub
-RFduino_Set($@)
+FHEMduino_Set($@)
 {
   my ($hash, @a) = @_;
 
-  return "\"set RFduino\" needs at least one parameter" if(@a < 2);
+  return "\"set FHEMduino\" needs at least one parameter" if(@a < 2);
   return "Unknown argument $a[1], choose one of " . join(" ", sort keys %sets)
   	if(!defined($sets{$a[1]}));
 
@@ -165,14 +165,14 @@ RFduino_Set($@)
     Log3 $name, 3, "set $name $type $arg";
     $arg = "l$arg" if($type eq "led");
     $arg = "x$arg" if($type eq "patable");
-    RFduino_SimpleWrite($hash, $arg);
+    FHEMduino_SimpleWrite($hash, $arg);
 
   return undef;
 }
 
 #####################################
 sub
-RFduino_Get($@)
+FHEMduino_Get($@)
 {
   my ($hash, @a) = @_;
   my $type = $hash->{TYPE};
@@ -190,8 +190,8 @@ RFduino_Get($@)
   return "No $a[1] for dummies" if(IsDummy($name));
 
   
-    RFduino_SimpleWrite($hash, $gets{$a[1]}[0] . $arg);
-    ($err, $msg) = RFduino_ReadAnswer($hash, $a[1], 0, $gets{$a[1]}[1]);
+    FHEMduino_SimpleWrite($hash, $gets{$a[1]}[0] . $arg);
+    ($err, $msg) = FHEMduino_ReadAnswer($hash, $a[1], 0, $gets{$a[1]}[1]);
     if(!defined($msg)) {
       DevIo_Disconnected($hash);
       $msg = "No answer";
@@ -215,14 +215,14 @@ RFduino_Get($@)
 }
 
 sub
-RFduino_Clear($)
+FHEMduino_Clear($)
 {
   my $hash = shift;
 
   # Clear the pipe
   $hash->{RA_Timeout} = 0.1;
   for(;;) {
-    my ($err, undef) = RFduino_ReadAnswer($hash, "Clear", 0, undef);
+    my ($err, undef) = FHEMduino_ReadAnswer($hash, "Clear", 0, undef);
     last if($err && $err =~ m/^Timeout/);
   }
   delete($hash->{RA_Timeout});
@@ -230,25 +230,25 @@ RFduino_Clear($)
 
 #####################################
 sub
-RFduino_DoInit($)
+FHEMduino_DoInit($)
 {
   my $hash = shift;
   my $name = $hash->{NAME};
   my $err;
   my $msg = undef;
 
-  RFduino_Clear($hash);
+  FHEMduino_Clear($hash);
   my ($ver, $try) = ("", 0);
   while ($try++ < 3 && $ver !~ m/^V/) {
-    RFduino_SimpleWrite($hash, "V");
-    ($err, $ver) = RFduino_ReadAnswer($hash, "Version", 0, undef);
+    FHEMduino_SimpleWrite($hash, "V");
+    ($err, $ver) = FHEMduino_ReadAnswer($hash, "Version", 0, undef);
     return "$name: $err" if($err && ($err !~ m/Timeout/ || $try == 3));
     $ver = "" if(!$ver);
   }
 
   if($ver !~ m/^V/) {
     $attr{$name}{dummy} = 1;
-    $msg = "Not an RFduino device, got for V:  $ver";
+    $msg = "Not an FHEMduino device, got for V:  $ver";
     Log3 $name, 1, $msg;
     return $msg;
   }
@@ -257,7 +257,7 @@ RFduino_DoInit($)
 
   # Cmd-String feststellen
 
-  my $cmds = RFduino_Get($hash, $name, "cmds", 0);
+  my $cmds = FHEMduino_Get($hash, $name, "cmds", 0);
   $cmds =~ s/$name cmds =>//g;
   $cmds =~ s/ //g;
   $hash->{CMDS} = $cmds;
@@ -275,19 +275,19 @@ RFduino_DoInit($)
 # This is a direct read for commands like get
 # Anydata is used by read file to get the filesize
 sub
-RFduino_ReadAnswer($$$$)
+FHEMduino_ReadAnswer($$$$)
 {
   my ($hash, $arg, $anydata, $regexp) = @_;
   my $type = $hash->{TYPE};
 
-  while($hash->{TYPE} eq "RFduino_RFR") {   # Look for the first "real" RFduino
+  while($hash->{TYPE} eq "FHEMduino_RFR") {   # Look for the first "real" FHEMduino
     $hash = $hash->{IODev};
   }
 
   return ("No FD", undef)
         if(!$hash || ($^O !~ /Win/ && !defined($hash->{FD})));
 
-  my ($mRFduinodata, $rin) = ("", '');
+  my ($mFHEMduinodata, $rin) = ("", '');
   my $buf;
   my $to = 3;                                         # 3 seconds timeout
   $to = $hash->{RA_Timeout} if($hash->{RA_Timeout});  # ...or less
@@ -310,7 +310,7 @@ RFduino_ReadAnswer($$$$)
         next if ($! == EAGAIN() || $! == EINTR() || $! == 0);
         my $err = $!;
         DevIo_Disconnected($hash);
-        return("RFduino_ReadAnswer $arg: $err", undef);
+        return("FHEMduino_ReadAnswer $arg: $err", undef);
       }
       return ("Timeout reading answer for get $arg", undef)
         if($nfound == 0);
@@ -320,17 +320,17 @@ RFduino_ReadAnswer($$$$)
     }
 
     if($buf) {
-      Log3 $hash->{NAME}, 5, "RFduino/RAW (ReadAnswer): $buf";
-      $mRFduinodata .= $buf;
+      Log3 $hash->{NAME}, 5, "FHEMduino/RAW (ReadAnswer): $buf";
+      $mFHEMduinodata .= $buf;
     }
-    $mRFduinodata = RFduino_RFR_DelPrefix($mRFduinodata) if($type eq "RFduino_RFR");
+    $mFHEMduinodata = FHEMduino_RFR_DelPrefix($mFHEMduinodata) if($type eq "FHEMduino_RFR");
 
     # \n\n is socat special
-    if($mRFduinodata =~ m/\r\n/ || $anydata || $mRFduinodata =~ m/\n\n/ ) {
-      if($regexp && $mRFduinodata !~ m/$regexp/) {
-        RFduino_Parse($hash, $hash, $hash->{NAME}, $mRFduinodata);
+    if($mFHEMduinodata =~ m/\r\n/ || $anydata || $mFHEMduinodata =~ m/\n\n/ ) {
+      if($regexp && $mFHEMduinodata !~ m/$regexp/) {
+        FHEMduino_Parse($hash, $hash, $hash->{NAME}, $mFHEMduinodata);
       } else {
-        return (undef, $mRFduinodata)
+        return (undef, $mFHEMduinodata)
       }
     }
   }
@@ -340,7 +340,7 @@ RFduino_ReadAnswer($$$$)
 #####################################
 # Check if the 1% limit is reached and trigger notifies
 sub
-RFduino_XmitLimitCheck($$)
+FHEMduino_XmitLimitCheck($$)
 {
   my ($hash,$fn) = @_;
   my $now = time();
@@ -357,7 +357,7 @@ RFduino_XmitLimitCheck($$)
   if(@b > 163) {          # Maximum nr of transmissions per hour (unconfirmed).
 
     my $name = $hash->{NAME};
-    Log3 $name, 2, "RFduino TRANSMIT LIMIT EXCEEDED";
+    Log3 $name, 2, "FHEMduino TRANSMIT LIMIT EXCEEDED";
     DoTrigger($name, "TRANSMIT LIMIT EXCEEDED");
 
   } else {
@@ -372,7 +372,7 @@ RFduino_XmitLimitCheck($$)
 
 #####################################
 sub
-RFduino_Write($$$)
+FHEMduino_Write($$$)
 {
   my ($hash,$fn,$msg) = @_;
 
@@ -381,31 +381,31 @@ RFduino_Write($$$)
   Log3 $name, 5, "$hash->{NAME} sending $fn$msg";
   my $bstring = "$fn$msg";
 
-  RFduino_SimpleWrite($hash, $bstring);
+  FHEMduino_SimpleWrite($hash, $bstring);
 
 }
 
 sub
-RFduino_SendFromQueue($$)
+FHEMduino_SendFromQueue($$)
 {
   my ($hash, $bstring) = @_;
   my $name = $hash->{NAME};
 
   if($bstring ne "") {
-	RFduino_XmitLimitCheck($hash,$bstring);
-    RFduino_SimpleWrite($hash, $bstring);
+	FHEMduino_XmitLimitCheck($hash,$bstring);
+    FHEMduino_SimpleWrite($hash, $bstring);
   }
 
   ##############
   # Write the next buffer not earlier than 0.23 seconds
   # = 3* (12*0.8+1.2+1.0*5*9+0.8+10) = 226.8ms
-  # else it will be sent too early by the RFduino, resulting in a collision
-  InternalTimer(gettimeofday()+0.3, "RFduino_HandleWriteQueue", $hash, 1);
+  # else it will be sent too early by the FHEMduino, resulting in a collision
+  InternalTimer(gettimeofday()+0.3, "FHEMduino_HandleWriteQueue", $hash, 1);
 }
 
 #####################################
 sub
-RFduino_HandleWriteQueue($)
+FHEMduino_HandleWriteQueue($)
 {
   my $hash = shift;
   my $arr = $hash->{QUEUE};
@@ -417,9 +417,9 @@ RFduino_HandleWriteQueue($)
     }
     my $bstring = $arr->[0];
     if($bstring eq "") {
-      RFduino_HandleWriteQueue($hash);
+      FHEMduino_HandleWriteQueue($hash);
     } else {
-      RFduino_SendFromQueue($hash, $bstring);
+      FHEMduino_SendFromQueue($hash, $bstring);
     }
   }
 }
@@ -427,7 +427,7 @@ RFduino_HandleWriteQueue($)
 #####################################
 # called from the global loop, when the select for hash->{FD} reports data
 sub
-RFduino_Read($)
+FHEMduino_Read($)
 {
   my ($hash) = @_;
 
@@ -435,21 +435,21 @@ RFduino_Read($)
   return "" if(!defined($buf));
   my $name = $hash->{NAME};
 
-  my $RFduinodata = $hash->{PARTIAL};
-  Log3 $name, 5, "RFduino/RAW: $RFduinodata/$buf"; 
-  $RFduinodata .= $buf;
+  my $FHEMduinodata = $hash->{PARTIAL};
+  Log3 $name, 5, "FHEMduino/RAW: $FHEMduinodata/$buf"; 
+  $FHEMduinodata .= $buf;
 
-  while($RFduinodata =~ m/\n/) {
+  while($FHEMduinodata =~ m/\n/) {
     my $rmsg;
-    ($rmsg,$RFduinodata) = split("\n", $RFduinodata, 2);
+    ($rmsg,$FHEMduinodata) = split("\n", $FHEMduinodata, 2);
     $rmsg =~ s/\r//;
-    RFduino_Parse($hash, $hash, $name, $rmsg) if($rmsg);
+    FHEMduino_Parse($hash, $hash, $name, $rmsg) if($rmsg);
   }
-  $hash->{PARTIAL} = $RFduinodata;
+  $hash->{PARTIAL} = $FHEMduinodata;
 }
 
 sub
-RFduino_Parse($$$$)
+FHEMduino_Parse($$$$)
 {
   my ($hash, $iohash, $name, $rmsg) = @_;
 
@@ -467,7 +467,7 @@ RFduino_Parse($$$$)
   }
 
   ###########################################
-  #Translate Message from RFduino to FHZ
+  #Translate Message from FHEMduino to FHZ
   next if(!$dmsg || length($dmsg) < 1);            # Bogus messages
 
   if($dmsg =~ m/^[0-9A-F]{4}U./) {                 # RF_ROUTER
@@ -510,11 +510,11 @@ RFduino_Parse($$$$)
 
 #####################################
 sub
-RFduino_Ready($)
+FHEMduino_Ready($)
 {
   my ($hash) = @_;
 
-  return DevIo_OpenDev($hash, 1, "RFduino_DoInit")
+  return DevIo_OpenDev($hash, 1, "FHEMduino_DoInit")
                 if($hash->{STATE} eq "disconnected");
 
   # This is relevant for windows/USB only
@@ -528,13 +528,13 @@ RFduino_Ready($)
 
 ########################
 sub
-RFduino_SimpleWrite(@)
+FHEMduino_SimpleWrite(@)
 {
   my ($hash, $msg, $nonl) = @_;
   return if(!$hash);
-  if($hash->{TYPE} eq "RFduino_RFR") {
-    # Prefix $msg with RRBBU and return the corresponding RFduino hash.
-    ($hash, $msg) = RFduino_RFR_AddPrefix($hash, $msg); 
+  if($hash->{TYPE} eq "FHEMduino_RFR") {
+    # Prefix $msg with RRBBU and return the corresponding FHEMduino hash.
+    ($hash, $msg) = FHEMduino_RFR_AddPrefix($hash, $msg); 
   }
 
   my $name = $hash->{NAME};
@@ -551,7 +551,7 @@ RFduino_SimpleWrite(@)
 }
 
 sub
-RFduino_Attr(@)
+FHEMduino_Attr(@)
 {
   my @a = @_;
 
@@ -563,28 +563,28 @@ RFduino_Attr(@)
 =pod
 =begin html
 
-<a name="RFduino"></a>
-<h3>RFduino</h3>
+<a name="FHEMduino"></a>
+<h3>FHEMduino</h3>
 <ul>
 
   <table>
   <tr><td>
-  The RFduino/CUR/CUN is a family of RF devices sold by <a
+  The FHEMduino/CUR/CUN is a family of RF devices sold by <a
   href="http://www.busware.de">busware.de</a>.
 
   With the opensource firmware (see this <a
-  href="http://RFduinofw.de/RFduinofw.html">link</a>) they are capable
+  href="http://FHEMduinofw.de/FHEMduinofw.html">link</a>) they are capable
   to receive and send different 868MHz protocols (FS20/FHT/S300/EM/HMS).
   It is even possible to use these devices as range extenders/routers, see the
-  <a href="#RFduino_RFR">RFduino_RFR</a> module for details.
+  <a href="#FHEMduino_RFR">FHEMduino_RFR</a> module for details.
   <br> <br>
 
   Some protocols (FS20, FHT and KS300) are converted by this module so that
   the same logical device can be used, irrespective if the radio telegram is
-  received by a RFduino or an FHZ device.<br> Other protocols (S300/EM) need their
-  own modules. E.g. S300 devices are processed by the RFduino_WS module if the
-  signals are received by the RFduino, similarly EMWZ/EMGZ/EMEM is handled by the
-  RFduino_EM module.<br><br>
+  received by a FHEMduino or an FHZ device.<br> Other protocols (S300/EM) need their
+  own modules. E.g. S300 devices are processed by the FHEMduino_WS module if the
+  signals are received by the FHEMduino, similarly EMWZ/EMGZ/EMEM is handled by the
+  FHEMduino_EM module.<br><br>
 
   It is possible to attach more than one device in order to get better
   reception, fhem will filter out duplicate messages.<br><br>
@@ -599,17 +599,17 @@ RFduino_Attr(@)
   </td></tr>
   </table>
 
-  <a name="RFduinodefine"></a>
+  <a name="FHEMduinodefine"></a>
   <b>Define</b>
   <ul>
-    <code>define &lt;name&gt; RFduino &lt;device&gt; &lt;FHTID&gt;</code> <br>
+    <code>define &lt;name&gt; FHEMduino &lt;device&gt; &lt;FHTID&gt;</code> <br>
     <br>
-    USB-connected devices (RFduino/CUR/CUN):<br><ul>
-      &lt;device&gt; specifies the serial port to communicate with the RFduino or
+    USB-connected devices (FHEMduino/CUR/CUN):<br><ul>
+      &lt;device&gt; specifies the serial port to communicate with the FHEMduino or
       CUR.  The name of the serial-device depends on your distribution, under
       linux the cdc_acm kernel module is responsible, and usually a
       /dev/ttyACM0 device will be created. If your distribution does not have a
-      cdc_acm module, you can force usbserial to handle the RFduino by the
+      cdc_acm module, you can force usbserial to handle the FHEMduino by the
       following command:<ul>modprobe usbserial vendor=0x03eb
       product=0x204b</ul>In this case the device is most probably
       /dev/ttyUSB0.<br><br>
@@ -632,24 +632,24 @@ RFduino_Attr(@)
     If the device is called none, then no device will be opened, so you
     can experiment without hardware attached.<br>
 
-    The FHTID is a 4 digit hex number, and it is used when the RFduino/CUR talks to
+    The FHTID is a 4 digit hex number, and it is used when the FHEMduino/CUR talks to
     FHT devices or when CUR requests data. Set it to 0000 to avoid answering
-    any FHT80b request by the RFduino.
+    any FHT80b request by the FHEMduino.
   </ul>
   <br>
 
-  <a name="RFduinoset"></a>
+  <a name="FHEMduinoset"></a>
   <b>Set </b>
   <ul>
     <li>raw<br>
-        Issue a RFduino firmware command.  See the <a
-        href="http://RFduinofw.de/commandref.html">this</a> document
-        for details on RFduino commands.
+        Issue a FHEMduino firmware command.  See the <a
+        href="http://FHEMduinofw.de/commandref.html">this</a> document
+        for details on FHEMduino commands.
         </li><br>
 
     <li>freq / bWidth / rAmpl / sens<br>
         <a href="#rfmode">SlowRF</a> mode only.<br>
-        Set the RFduino frequency / bandwidth / receiver-amplitude / sensitivity<br>
+        Set the FHEMduino frequency / bandwidth / receiver-amplitude / sensitivity<br>
 
         Use it with care, it may destroy your hardware and it even may be
         illegal to do so. Note: the parameters used for RFR transmission are
@@ -657,7 +657,7 @@ RFduino_Attr(@)
         <ul>
         <li>freq sets both the reception and transmission frequency. Note:
             although the CC1101 can be set to frequencies between 315 and 915
-            MHz, the antenna interface and the antenna of the RFduino is tuned for
+            MHz, the antenna interface and the antenna of the FHEMduino is tuned for
             exactly one frequency. Default is 868.3MHz (or 433MHz)</li>
         <li>bWidth can be set to values between 58kHz and 812kHz. Large values
             are susceptible to interference, but make possible to receive
@@ -672,30 +672,30 @@ RFduino_Attr(@)
         </ul>
         </li><br>
     <li>led<br>
-        Set the RFduino led off (00), on (01) or blinking (02).
+        Set the FHEMduino led off (00), on (01) or blinking (02).
         </li><br>
   </ul>
 
-  <a name="RFduinoget"></a>
+  <a name="FHEMduinoget"></a>
   <b>Get</b>
   <ul>
     <li>version<br>
-        return the RFduino firmware version
+        return the FHEMduino firmware version
         </li><br>
     <li>uptime<br>
-        return the RFduino uptime (time since RFduino reset).
+        return the FHEMduino uptime (time since FHEMduino reset).
         </li><br>
     <li>raw<br>
-        Issue a RFduino firmware command, and wait for one line of data returned by
-        the RFduino. See the RFduino firmware README document for details on RFduino
+        Issue a FHEMduino firmware command, and wait for one line of data returned by
+        the FHEMduino. See the FHEMduino firmware README document for details on FHEMduino
         commands.
         </li><br>
     <li>fhtbuf<br>
-        RFduino has a message buffer for the FHT. If the buffer is full, then newly
+        FHEMduino has a message buffer for the FHT. If the buffer is full, then newly
         issued commands will be dropped, and an "EOB" message is issued to the
         fhem log.
         <code>fhtbuf</code> returns the free memory in this buffer (in hex),
-        an empty buffer in the RFduino-V2 is 74 bytes, in RFduino-V3/CUN 200 Bytes.
+        an empty buffer in the FHEMduino-V2 is 74 bytes, in FHEMduino-V3/CUN 200 Bytes.
         A message occupies 3 + 2x(number of FHT commands) bytes,
         this is the second reason why sending multiple FHT commands with one
         <a href="#set">set</a> is a good idea. The first reason is, that
@@ -703,14 +703,14 @@ RFduino_Attr(@)
         </li> <br>
 
     <li>ccconf<br>
-        Read some RFduino radio-chip (cc1101) registers (frequency, bandwidth, etc),
+        Read some FHEMduino radio-chip (cc1101) registers (frequency, bandwidth, etc),
         and display them in human readable form.
         </li><br>
 
     <li>cmds<br>
-        Depending on the firmware installed, RFduinos have a different set of
+        Depending on the firmware installed, FHEMduinos have a different set of
         possible commands. Please refer to the README of the firmware of your
-        RFduino to interpret the response of this command. See also the raw-
+        FHEMduino to interpret the response of this command. See also the raw-
         command.
         </li><br>
     <li>credit10ms<br>
@@ -719,16 +719,16 @@ RFduino_Attr(@)
         </li><br>
   </ul>
 
-  <a name="RFduinoattr"></a>
+  <a name="FHEMduinoattr"></a>
   <b>Attributes</b>
   <ul>
     <li><a href="#do_not_notify">do_not_notify</a></li>
     <li><a href="#attrdummy">dummy</a></li>
     <li><a href="#showtime">showtime</a></li>
-    <li><a href="#model">model</a> (RFduino,CUN,CUR)</li>
+    <li><a href="#model">model</a> (FHEMduino,CUN,CUR)</li>
     <li><a name="sendpool">sendpool</a><br>
-        If using more than one RFduino/CUN for covering a large area, sending
-        different events by the different RFduino's might disturb each other. This
+        If using more than one FHEMduino/CUN for covering a large area, sending
+        different events by the different FHEMduino's might disturb each other. This
         phenomenon is also known as the Palm-Beach-Resort effect.
         Putting them in a common sendpool will serialize sending the events.
         E.g. if you have three CUN's, you have to specify following
@@ -739,10 +739,10 @@ RFduino_Attr(@)
         </li><br>
     <li><a name="addvaltrigger">addvaltrigger</a><br>
         Create triggers for additional device values. Right now these are RSSI
-        and RAWMSG for the RFduino family and RAWMSG for the FHZ.
+        and RAWMSG for the FHEMduino family and RAWMSG for the FHZ.
         </li><br>
     <li><a name="rfmode">rfmode</a><br>
-        Configure the RF Transceiver of the RFduino (the CC1101). Available
+        Configure the RF Transceiver of the FHEMduino (the CC1101). Available
         arguments are:
         <ul>
         <li>SlowRF<br>

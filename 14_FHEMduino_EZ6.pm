@@ -1,29 +1,29 @@
 ##############################################
-# $Id: 14_RFduino_EZ6.pm 3818 2013-09-22 $
+# $Id: 14_FHEMduino_EZ6.pm 3818 2013-09-22 $
 package main;
 
 use strict;
 use warnings;
 
 # Supports following devices:
-# KS300TH     (this is redirected to the more sophisticated 14_KS300 by 00_RFduino)
+# KS300TH     (this is redirected to the more sophisticated 14_KS300 by 00_FHEMduino)
 # S300TH  
 # WS2000/WS7000
 #
 
 #####################################
 sub
-RFduino_EZ6_Initialize($)
+FHEMduino_EZ6_Initialize($)
 {
   my ($hash) = @_;
 
   # Message is like
   # EZ0A12+164000
   $hash->{Match}     = "^E...........";
-  $hash->{DefFn}     = "RFduino_EZ6_Define";
-  $hash->{UndefFn}   = "RFduino_EZ6_Undef";
-  $hash->{AttrFn}    = "RFduino_EZ6_Attr";
-  $hash->{ParseFn}   = "RFduino_EZ6_Parse";
+  $hash->{DefFn}     = "FHEMduino_EZ6_Define";
+  $hash->{UndefFn}   = "FHEMduino_EZ6_Undef";
+  $hash->{AttrFn}    = "FHEMduino_EZ6_Attr";
+  $hash->{ParseFn}   = "FHEMduino_EZ6_Parse";
   $hash->{AttrList}  = "IODev do_not_notify:0,1 showtime:0,1 ignore:0,1 ".
                        $readingFnAttributes;
 }
@@ -31,36 +31,36 @@ RFduino_EZ6_Initialize($)
 
 #####################################
 sub
-RFduino_EZ6_Define($$)
+FHEMduino_EZ6_Define($$)
 {
   my ($hash, $def) = @_;
   my @a = split("[ \t][ \t]*", $def);
 
-  return "wrong syntax: define <name> RFduino_EZ6 <code>".int(@a)
+  return "wrong syntax: define <name> FHEMduino_EZ6 <code>".int(@a)
             if(int(@a) != 3);
 			
   #return "Define $a[0]: wrong CODE format: valid is 1-8"
   #              if($a[2] !~ m/^[1-8]$/);
 
   $hash->{CODE} = $a[2];
-  $modules{RFduino_EZ6}{defptr}{$a[2]} = $hash;
+  $modules{FHEMduino_EZ6}{defptr}{$a[2]} = $hash;
   AssignIoPort($hash);
   return undef;
 }
 
 #####################################
 sub
-RFduino_EZ6_Undef($$)
+FHEMduino_EZ6_Undef($$)
 {
   my ($hash, $name) = @_;
-  delete($modules{RFduino_EZ6}{defptr}{$hash->{CODE}}) if($hash && $hash->{CODE});
+  delete($modules{FHEMduino_EZ6}{defptr}{$hash->{CODE}}) if($hash && $hash->{CODE});
   return undef;
 }
 
 
 #####################################
 sub
-RFduino_EZ6_Parse($$)
+FHEMduino_EZ6_Parse($$)
 {
   my ($hash,$msg) = @_;
   
@@ -73,11 +73,11 @@ RFduino_EZ6_Parse($$)
   #  12345678901
   my $cde = $a[1].$a[2].$a[3];
   
-  my $def = $modules{RFduino_EZ6}{defptr}{$hash->{NAME} . "." . $cde};
-  $def = $modules{RFduino_EZ6}{defptr}{$cde} if(!$def);
+  my $def = $modules{FHEMduino_EZ6}{defptr}{$hash->{NAME} . "." . $cde};
+  $def = $modules{FHEMduino_EZ6}{defptr}{$cde} if(!$def);
   if(!$def) {
-    Log3 $hash, 1, "RFduino_EZ6 UNDEFINED sensor detected, code $cde";
-    return "UNDEFINED RFduino_EZ6_$cde RFduino_EZ6 $cde";
+    Log3 $hash, 1, "FHEMduino_EZ6 UNDEFINED sensor detected, code $cde";
+    return "UNDEFINED FHEMduino_EZ6_$cde FHEMduino_EZ6 $cde";
   }
   
   $hash = $def;
@@ -95,10 +95,10 @@ RFduino_EZ6_Parse($$)
   $val = "T $tmp H $hum B $bat";
 	  
   if(!$val) {
-    Log3 $name, 1, "RFduino_EZ6 Cannot decode $msg";
+    Log3 $name, 1, "FHEMduino_EZ6 Cannot decode $msg";
     return "";
   }
-  Log3 $name, 4, "RFduino_EZ6 $name: $val";
+  Log3 $name, 4, "FHEMduino_EZ6 $name: $val";
 
   readingsBeginUpdate($hash);
   readingsBulkUpdate($hash, "state", $val);
@@ -111,7 +111,7 @@ RFduino_EZ6_Parse($$)
 }
 
 sub
-RFduino_EZ6_Attr(@)
+FHEMduino_EZ6_Attr(@)
 {
   my @a = @_;
 
@@ -121,8 +121,8 @@ RFduino_EZ6_Attr(@)
   my $hash = $defs{$a[1]};
   my $iohash = $defs{$a[3]};
   my $cde = $hash->{CODE};
-  delete($modules{RFduino_EZ6}{defptr}{$cde});
-  $modules{RFduino_EZ6}{defptr}{$iohash->{NAME} . "." . $cde} = $hash;
+  delete($modules{FHEMduino_EZ6}{defptr}{$cde});
+  $modules{FHEMduino_EZ6}{defptr}{$iohash->{NAME} . "." . $cde} = $hash;
   return undef;
 }
 
@@ -132,16 +132,16 @@ RFduino_EZ6_Attr(@)
 =pod
 =begin html
 
-<a name="RFduino_EZ6"></a>
-<h3>RFduino_EZ6</h3>
+<a name="FHEMduino_EZ6"></a>
+<h3>FHEMduino_EZ6</h3>
 <ul>
-  The RFduino_EZ6 module interprets S300 type of messages received by the RFduino.
+  The FHEMduino_EZ6 module interprets S300 type of messages received by the FHEMduino.
   <br><br>
 
-  <a name="RFduino_EZ6define"></a>
+  <a name="FHEMduino_EZ6define"></a>
   <b>Define</b>
   <ul>
-    <code>define &lt;name&gt; RFduino_EZ6 &lt;code&gt; [corr1...corr4]</code> <br>
+    <code>define &lt;name&gt; FHEMduino_EZ6 &lt;code&gt; [corr1...corr4]</code> <br>
     <br>
     &lt;code&gt; is the code which must be set on the S300 device. Valid values
     are 1 through 8.<br>
@@ -151,13 +151,13 @@ RFduino_EZ6_Attr(@)
   </ul>
   <br>
 
-  <a name="RFduino_EZ6set"></a>
+  <a name="FHEMduino_EZ6set"></a>
   <b>Set</b> <ul>N/A</ul><br>
 
-  <a name="RFduino_EZ6get"></a>
+  <a name="FHEMduino_EZ6get"></a>
   <b>Get</b> <ul>N/A</ul><br>
 
-  <a name="RFduino_EZ6attr"></a>
+  <a name="FHEMduino_EZ6attr"></a>
   <b>Attributes</b>
   <ul>
     <li><a href="#IODev">IODev (!)</a></li>
