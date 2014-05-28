@@ -1,6 +1,6 @@
 ###########################################
-# FHEMduino ERLO Modul (Remote/Switch)
-# $Id: 14_FHEMduino_PT2262.pm 0001 2014-03-12 23:33:49Z snoop $
+# FHEMduino PT2262 Modul (Remote/Switch)
+# $Id: 14_FHEMduino_PT2262.pm 0002 2014-05-28 snoop & mdorenka $
 
 package main;
 
