@@ -32,12 +32,13 @@ my %sets = (
   "time"      => ""
 );
 
-my $clientsSlowRF = ":IT:FHEMduino_EZ6:";
+my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_PT2262:";
 
 my %matchListSlowRF = (
-    "1:IT"              => "^i......\$",
+    "1:IT"                => "^i......\$",
     "2:FHEMduino_EZ6"     => "E...........\$",
     "3:FHEMduino_KW9010"  => "K...........\$",
+	"4:FHEMduino_PT2262"  => "IR.*\$",
 );
 
 sub
@@ -69,9 +70,9 @@ sub
 FHEMduino_FingerprintFn($$)
 {
   my ($name, $msg) = @_;
- 
+  Log3 $name,5, "FingerprintFn Message: Name: $name  und Message: $msg";
   # Store only the "relevant" part, as the FHEMduino won't compute the checksum
-  $msg = substr($msg, 8) if($msg =~ m/^81/ && length($msg) > 8);
+  $msg = substr($msg, 8) if($msg =~ m/^81/ && length($msg) > 9);
  
   return ($name, $msg);
 }
@@ -471,12 +472,12 @@ FHEMduino_Parse($$$$)
   next if(!$dmsg || length($dmsg) < 1);            # Bogus messages
 
   if($dmsg =~ m/^[0-9A-F]{4}U./) {                 # RF_ROUTER
-    Dispatch($hash, $dmsg, undef);
+	Dispatch($hash, $dmsg, undef);
     return;
   }
 
   my $fn = substr($dmsg,0,1);
-  my $len = length($dmsg);
+  my $len = int(length($dmsg));
 
   if($fn eq "i" && $len >= 7) {              # IT
     $dmsg = lc($dmsg);
@@ -484,15 +485,18 @@ FHEMduino_Parse($$$$)
 	### implement error checking here!
 	;
   }
-
   elsif($fn eq "K" && $len >= 2) {
   ### implement error checking here!
   ;
   }
-
+  elsif($fn eq "I" && $len >= 2) {			# PT2262
+	Dispatch($hash, $dmsg, undef);
+  ### implement error checking here!
+  ;
+  }
   else {
-    DoTrigger($name, "UNKNOWNCODE $dmsg");
-    Log3 $name, 2, "$name: unknown message $dmsg";
+    DoTrigger($name, "UNKNOWNCODE $dmsg message length ($len)");
+    Log3 $name, 2, "$name: unknown message $dmsg message length ($len)";
     return;
   }
 

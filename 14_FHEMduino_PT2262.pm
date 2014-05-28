@@ -1,0 +1,397 @@
+###########################################
+# FHEMduino ERLO Modul (Remote/Switch)
+# $Id: 14_FHEMduino_PT2262.pm 0001 2014-03-12 23:33:49Z snoop $
+
+package main;
+
+use strict;
+use warnings;
+
+my %codes = (
+  "XMIToff" 		=> "off",
+  "XMITon" 			=> "on",
+  );
+
+my %elro_c2b;
+
+my $it_defrepetition = 6;   ## Default number of InterTechno Repetitions
+
+my $it_simple ="off on";
+my %models = (
+  itremote    => 'sender',
+  itswitch    => 'simple',
+  itdimmer    => 'dimmer',
+  );
+
+# Supports following devices:
+# - PT2262
+# - DÜWI  
+#####################################
+sub FHEMduino_PT2262_Initialize($){ ####################################################
+  my ($hash) = @_;
+
+  foreach my $k (keys %codes) {
+    $elro_c2b{$codes{$k}} = $k;
+  }
+  
+  $hash->{Match}     = "^IR.?\$";
+  $hash->{SetFn}     = "FHEMduino_PT2262_Set";
+  $hash->{StateFn}   = "FHEMduino_PT2262_SetState";
+  $hash->{DefFn}     = "FHEMduino_PT2262_Define";
+  $hash->{UndefFn}   = "FHEMduino_PT2262_Undef";
+  $hash->{AttrFn}    = "FHEMduino_PT2262_Attr";
+  $hash->{ParseFn}   = "FHEMduino_PT2262_Parse";
+  $hash->{AttrList}  = "IODev do_not_notify:0,1 showtime:0,1 ignore:0,1 model:itremote,itswitch,itdimmer".
+  $readingFnAttributes;
+}
+
+sub FHEMduino_PT2262_SetState($$$$){ ###################################################
+  my ($hash, $tim, $vt, $val) = @_;
+  $val = $1 if($val =~ m/^(.*) \d+$/);
+  return "Undefined value $val" if(!defined($elro_c2b{$val}));
+  return undef;
+}
+
+sub FHEMduino_PT2262_Define($$){ #######################################################
+
+  my ($hash, $def) = @_;
+  my @a = split("[ \t][ \t]*", $def);
+
+  my $name = $a[0];
+  my $tristatecode = $a[2];
+  my $code = lc($tristatecode); 
+
+  my $ontristate = "0F";
+  my $offtristate = "F0";
+
+  if(int(@a) == 3) {
+  }
+  elsif(int(@a) == 5) {
+    $ontristate = $a[3];
+    $offtristate = $a[4];
+  }
+  else {
+    return "wrong syntax: define <name> FHEMduino_PT2262 <code>";
+  }
+
+
+  Log3 undef, 5, "Arraylenght:  int(@a)";
+
+  $hash->{CODE} = $tristatecode;
+  $hash->{DEF} = $tristatecode . " " . $ontristate . " " . $offtristate;
+  $hash->{XMIT} = lc($tristatecode);
+  
+  Log3 $hash, 5, "Define hascode: {$tristatecode}{$name}";
+  $modules{FHEMduino_PT2262}{defptr}{$tristatecode} = $hash;
+  $hash->{$elro_c2b{"on"}}  = lc($ontristate);
+  $hash->{$elro_c2b{"off"}} = lc($offtristate);
+  $modules{FHEMduino_PT2262}{defptr}{$code}{$name} = $hash;
+
+  if(!defined $hash->{IODev} ||!defined $hash->{IODev}{NAME}){
+   AssignIoPort($hash);
+ };
+ return undef;
+}
+
+sub FHEMduino_PT2262_Set($@){ ##########################################################
+  my ($hash, @a) = @_;
+  my $ret = undef;
+  my $na = int(@a);
+  my $message;
+  my $msg;
+  my $hname = $hash->{NAME};
+  
+  return "no set value specified" if($na < 2 || $na > 3);
+  
+  my $c = $elro_c2b{$a[1]};
+
+  if(!defined($c)) {
+
+   # Model specific set arguments
+   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"model"})) {
+     my $mt = $models{$attr{$a[0]}{"model"}};
+     return "Unknown argument $a[1], choose one of "
+     if($mt && $mt eq "sender");
+     return "Unknown argument $a[1], choose one of $it_simple"
+     if($mt && $mt eq "simple");
+   }
+   return "Unknown argument $a[1], choose one of " . join(" ", sort keys %elro_c2b);
+ }
+ my $io = $hash->{IODev};
+
+  ## Do we need to change RFMode to SlowRF??
+  if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"switch_rfmode"})) {
+  	if ($attr{$a[0]}{"switch_rfmode"} eq "1") {			# do we need to change RFMode of IODev
+      my $ret = CallFn($io->{NAME}, "AttrFn", "set", ($io->{NAME}, "rfmode", "SlowRF"));
+    }	
+  }
+
+  ## Do we need to change ITrepetition ??	
+  if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"ITrepetition"})) {
+  	$message = "isr".$attr{$a[0]}{"ITrepetition"};
+    CUL_SimpleWrite($io, $message);
+    Log GetLogLevel($a[0],4), "FHEMduino_PT2262 set ITrepetition: $message for $io->{NAME}";
+  }
+
+  ## Do we need to change ITfrequency ??	
+  if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"ITfrequency"})) {
+    my $f = $attr{$a[0]}{"ITfrequency"}/26*65536;
+    my $f2 = sprintf("%02x", $f / 65536);
+    my $f1 = sprintf("%02x", int($f % 65536) / 256);
+    my $f0 = sprintf("%02x", $f % 256);
+    
+    my $arg = sprintf("%.3f", (hex($f2)*65536+hex($f1)*256+hex($f0))/65536*26);
+    Log GetLogLevel($a[0],4), "Setting ITfrequency (0D,0E,0F) to $f2 $f1 $f0 = $arg MHz";
+    CUL_SimpleWrite($hash, "if$f2$f1$f0");
+  }
+
+  my $v = join(" ", @a);
+  $message = "is".uc($hash->{XMIT}.$hash->{$c});
+
+  ## Log that we are going to switch InterTechno
+  Log GetLogLevel($a[0],2), "FHEMduino_PT2262 set $v";
+  (undef, $v) = split(" ", $v, 2);	# Not interested in the name...
+
+  ## Send Message to IODev and wait for correct answer
+  Log3 $hash, 5, "Messsage an IO senden Message raw: $message";
+  $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
+  if ($msg =~ m/raw => $message/) {
+    Log3 $hash, 5, "Answer from $io->{NAME}: $msg";
+
+    } else {
+      Log3 $hash, 5, "FHEMduino_PT2262 IODev device didn't answer is command correctly: $msg";
+    }
+  # Look for all devices with the same code, and set state, timestamp
+  my $code = "$hash->{XMIT}";
+  my $name = "$hash->{NAME}";
+  my $tn = TimeNow();
+
+  foreach my $n (keys %{ $modules{FHEMduino_PT2262}{defptr}{$code} }) {
+    my $lh = $modules{FHEMduino_PT2262}{defptr}{$code}{$n};
+    $lh->{CHANGED}[0] = $v;
+    $lh->{STATE} = $v;
+    $lh->{READINGS}{state}{TIME} = $tn;
+    $lh->{READINGS}{state}{VAL} = $v;
+    $modules{FHEMduino_PT2262}{defptr}{$code}{$name}  = $hash;
+  }
+  return $ret;
+}
+
+sub getButton($$){ ###################################################################
+
+  my ($hash,$msg) = @_;
+  my $receivedHouseCode = "undef";
+  my $receivedButtonCode = "undef";
+  my $receivedActionCode ="undef";
+  my $parsedHouseCode = "undef";
+  my $parsedButtonCode = "undef";
+  my $parsedAction = "undef";
+  my $ontristate = $hash->{$elro_c2b{"on"}};
+  my $offtristate = $hash->{$elro_c2b{"off"}};
+
+  my $bin = dec2bin($msg);
+  my $msgmod = bin2tristate($bin);
+  #Log3 $hash, 5, "FHEMduino_PT2262 Message received: $msg BIN $bin TRISTATE $msgmod";
+
+  ## Groupcode
+  $receivedHouseCode = substr($msgmod,0,5);
+  $receivedButtonCode = substr($msgmod,5,5);
+  $receivedActionCode = substr($msgmod,10,2);
+  Log3 $hash, 5, "FHEMduino_PT2262 Message Housecode: $receivedHouseCode Buttoncode: $receivedButtonCode actioncode $receivedActionCode";
+
+  my %housecode = ("00000" => "0",
+    "0000F" => "1",
+    "000F0" => "2",
+    "000FF" => "3",
+    "00F00" => "4",
+    "00F0F" => "5",
+    "00FF0" => "6",
+    "00FFF" => "7",
+    "0F000" => "8",
+    "0F00F" => "9",
+    "0F0F0" => "10",
+    "0F0FF" => "11",
+    "0FF00" => "12",
+    "0FF0F" => "13",
+    "0FFF0" => "14",
+    "0FFFF" => "15",
+    "F0000" => "16",
+    "F000F" => "17",
+    "F00F0" => "18",
+    "F00FF" => "19",
+    "F0F00" => "20",
+    "F0F0F" => "21",
+    "F0FF0" => "22",
+    "F0FFF" => "23",
+    "FF000" => "24",
+    "FF00F" => "25",
+    "FF0F0" => "26",
+    "FF0FF" => "27",
+    "FFF00" => "28",
+    "FFF0F" => "29",
+    "FFFF0" => "30",
+    "FFFFF" => "31"
+    );
+
+  my %button = (
+    "00000" => "0",
+    "0000F" => "E",
+    "000F0" => "D",
+    "000FF" => "3",
+    "00F00" => "C",
+    "00F0F" => "5",
+    "00FF0" => "6",
+    "00FFF" => "7",
+    "0F000" => "B",
+    "0F00F" => "9",
+    "0F0F0" => "10",
+    "0F0FF" => "11",
+    "0FF00" => "12",
+    "0FF0F" => "13",
+    "0FFF0" => "14",
+    "0FFFF" => "15",
+    "F0000" => "A",
+    "F000F" => "17",
+    "F00F0" => "18",
+    "F00FF" => "19",
+    "F0F00" => "20",
+    "F0F0F" => "21",
+    "F0FF0" => "22",
+    "F0FFF" => "23",
+    "FF000" => "24",
+    "FF00F" => "25",
+    "FF0F0" => "26",
+    "FF0FF" => "27",
+    "FFF00" => "28",
+    "FFF0F" => "29",
+    "FFFF0" => "30",
+    "FFFFF" => "31"
+    );
+
+  my %action = (
+    "FF" => "on",
+    "0F"	=> "on",
+    "F0"	=> "off"
+    );
+
+  if (exists $housecode{$receivedHouseCode}) {
+    $parsedHouseCode = $housecode{$receivedHouseCode};
+  }
+
+  if (exists $button{$receivedButtonCode}) {
+    $parsedButtonCode = $button{$receivedButtonCode};
+  }
+
+  if (exists $action{$receivedActionCode}) {
+    $parsedAction = $action{$receivedActionCode};
+  }
+  
+  if ($parsedHouseCode ne "undef") {
+    if ($parsedButtonCode ne "undef") {
+      if ($parsedAction ne "undef") {
+        Log3 $hash, 5, "Get button return/result: ID: " . $receivedHouseCode . $receivedButtonCode . "DEVICE: " . $parsedHouseCode . "_" . $parsedButtonCode . " ACTION: " . $parsedAction;
+        return $parsedHouseCode . "_" . $parsedButtonCode . " " . $receivedHouseCode . $receivedButtonCode . " " . $parsedAction;
+      }
+    }
+  }
+  return "";
+}
+
+sub FHEMduino_PT2262_Parse($$){ ########################################################
+
+  my ($hash,$msg) = @_;
+
+  my $deviceCode = "";
+  my $displayName = "";
+  my $action = "";
+  my $result = "";
+
+  $result = getButton($hash,$msg);
+
+  if ($result ne "") {
+    ($displayName,$deviceCode,$action) = split m/ /, $result, 3;
+
+    Log3 $hash, 5, "Parse: Device: $displayName Action: $action";
+
+    my $def = $modules{FHEMduino_PT2262}{defptr}{$hash->{NAME} . "." . $deviceCode};
+    $def = $modules{FHEMduino_PT2262}{defptr}{$deviceCode} if(!$def);
+
+    if(!$def) {
+      Log3 $hash, 5, "UNDEFINED Remotebutton send to define: $displayName";
+      return "UNDEFINED FHEMduino_PT2262_$displayName FHEMduino_PT2262 $deviceCode"
+    }
+
+    $hash = $def;
+
+    my $name = $hash->{NAME};
+    return "" if(IsIgnored($name));
+
+    if(!$action) {
+      Log3 $name, 5, "FHEMduino_PT2262 can't decode $msg";
+      return "";
+    }
+    Log3 $name, 5, "FHEMduino_PT2262 actioncode: $action";
+
+    readingsBeginUpdate($hash);
+    readingsBulkUpdate($hash, "state", $action);
+    readingsEndUpdate($hash, 1);
+    return $name;
+  }
+  return "";
+}
+
+sub FHEMduino_PT2262_Attr(@){ ##########################################################
+  my @a = @_;
+
+  # Make possible to use the same code for different logical devices when they
+  # are received through different physical devices.
+  return if($a[0] ne "set" || $a[2] ne "IODev");
+  my $hash = $defs{$a[1]};
+  my $iohash = $defs{$a[3]};
+  my $cde = $hash->{CODE};
+  delete($modules{FHEMduino_PT2262}{defptr}{$cde});
+  $modules{FHEMduino_PT2262}{defptr}{$iohash->{NAME} . "." . $cde} = $hash;
+  
+  return undef;
+}
+
+sub FHEMduino_PT2262_Undef($$){ ########################################################
+  my ($hash, $name) = @_;
+  delete($modules{FHEMduino_PT2262}{defptr}{$hash->{CODE}}) if($hash && $hash->{CODE});
+  return undef;
+}
+
+sub dec2bin($){ ######################################################################
+	my ($strraw) = @_;
+	my $str = unpack("B*", pack("N", substr($strraw,2,length($strraw)-2)));
+    $str =~ s/^0{8}(?=\d)//;   # cut first 8 zeros
+    return $str;
+  }
+
+sub bin2tristate{ ####################################################################
+	my $bindata = shift;
+	my $returnValue = "";
+	my $pos = 0;
+	my $i = 0;
+
+	while($i < length($bindata)/2){
+
+		if (substr($bindata,$pos,1)=='0' && substr($bindata,$pos+1,1)=='0') {
+			$returnValue .= '0';
+			#print "value $returnValue.\n";
+      } elsif (substr($bindata,$pos,1)=='1' && substr($bindata,$pos+1,1)=='1') {
+       $returnValue .= '1';
+			#print "value $returnValue.\n";
+      } elsif (substr($bindata,$pos,1)=='0' && substr($bindata,$pos+1,1)=='1') {
+       $returnValue .= 'F';
+			#print "value $returnValue.\n";
+      } else {
+			#return "not applicable";
+		}
+		$pos = $pos+2;
+		$i++;
+	}
+  return $returnValue;
+}
+
+1;
