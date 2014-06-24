@@ -113,7 +113,7 @@ FHEMduino_KW9010_Parse($$)
   $tmp = int($a[6].$a[7].$a[8].$a[9])/10.0;
   $hum = int($a[10].$a[11]);
   
-  $val = "T $tmp H $hum B $bat";
+  $val = "T $tmp H $hum";
 
 
   if(!$val) {
