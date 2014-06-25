@@ -32,13 +32,18 @@ my %sets = (
   "time"      => ""
 );
 
-my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_PT2262:";
+my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_PT2262:FHEMduino_NC_WS:FHEMduino_EuroChr:FHEMduino_DCF77:FHEMduino_FA20RF:FHEMduino_GAS:";
 
 my %matchListSlowRF = (
-    "1:IT"                => "^i......\$",
-    "2:FHEMduino_EZ6"     => "E...........\$",
-    "3:FHEMduino_KW9010"  => "K...........\$",
-	"4:FHEMduino_PT2262"  => "IR.*\$",
+    "1:IT"                 => "^i......\$",
+    "2:FHEMduino_EZ6"      => "E...........\$",
+    "3:FHEMduino_KW9010"   => "K...........\$",
+    "4:FHEMduino_PT2262"   => "IR.*\$",
+    "5:FHEMduino_NC_WS"    => "L............\$",
+    "6:FHEMduino_EuroChr"  => "T.............\$",
+    "7:FHEMduino_DCF77"    => "D...............\$",
+    "8:FHEMduino_FA20RF"   => "F............\$",
+    "9:FHEMduino_Gas"      => "G...........\$",
 );
 
 sub
@@ -489,11 +494,41 @@ FHEMduino_Parse($$$$)
   ### implement error checking here!
   ;
   }
+  elsif($fn eq "L" && $len >= 2) {          # LogiLink
+    Log3 $name, 4, "LogiL: $dmsg";
+  ### implement error checking here!
+  ;
+  }
+  elsif($fn eq "T" && $len >= 2) {          # EuroChron / Tchibo
+    Log3 $name, 4, "EuTch: $dmsg";
+  ### implement error checking here!
+  ;
+  }
   elsif($fn eq "I" && $len >= 2) {			# PT2262
 	Dispatch($hash, $dmsg, undef);
   ### implement error checking here!
   ;
   }
+  elsif($fn eq "D" && $len >= 2) {			# DCF77
+    Log3 $name, 4, "DCF77: $dmsg";
+  ### implement error checking here!
+  ;
+  }
+  elsif($fn eq "F" && $len >= 2) {			# FA20RF
+    Log3 $name, 4, "FA20RF: $dmsg";
+  ### implement error checking here!
+  ;
+  }
+    elsif($fn eq "G" && $len >= 2) {        # Gas
+  ### implement error checking here!
+  ;
+  }
+  elsif($fn eq "I" && $len >= 8) {			# ELRO
+	Dispatch($hash, $dmsg, undef);
+  ### implement error checking here!
+  ;
+  }
+
   else {
     DoTrigger($name, "UNKNOWNCODE $dmsg message length ($len)");
     Log3 $name, 2, "$name: unknown message $dmsg message length ($len)";
