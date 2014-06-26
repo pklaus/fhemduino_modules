@@ -32,7 +32,7 @@ my %sets = (
   "time"      => ""
 );
 
-my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_PT2262:FHEMduino_NC_WS:FHEMduino_EuroChr:FHEMduino_DCF77:FHEMduino_FA20RF:FHEMduino_GAS:";
+my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_PT2262:FHEMduino_NC_WS:FHEMduino_EuroChr:FHEMduino_DCF77:FHEMduino_FA20RF:FHEMduino_GAS:FHEMduino_Oregon:";
 
 my %matchListSlowRF = (
     "1:IT"                 => "^i......\$",
@@ -44,6 +44,7 @@ my %matchListSlowRF = (
     "7:FHEMduino_DCF77"    => "D...............\$",
     "8:FHEMduino_FA20RF"   => "F............\$",
     "9:FHEMduino_Gas"      => "G...........\$",
+	"10:FHEMduino_Oregon"  => "OSV.*\$",
 );
 
 sub
