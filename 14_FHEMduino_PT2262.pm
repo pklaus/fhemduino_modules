@@ -17,7 +17,7 @@ my %codes = (
 
 my %elro_c2b;
 
-my $it_defrepetition = 6;   ## Default number of InterTechno Repetitions
+my $it_defrepetition = 3;   ## Default number of InterTechno Repetitions
 
 my $it_simple ="off on";
 my %models = (
@@ -28,7 +28,7 @@ my %models = (
 
 # Supports following devices:
 # - PT2262
-# - DÜWI  
+# - DÃœWI  
 #####################################
 sub FHEMduino_PT2262_Initialize($){ ####################################################
   my ($hash) = @_;
@@ -44,7 +44,7 @@ sub FHEMduino_PT2262_Initialize($){ ############################################
   $hash->{UndefFn}   = "FHEMduino_PT2262_Undef";
   $hash->{AttrFn}    = "FHEMduino_PT2262_Attr";
   $hash->{ParseFn}   = "FHEMduino_PT2262_Parse";
-  $hash->{AttrList}  = "IODev do_not_notify:0,1 showtime:0,1 ignore:0,1 model:itremote,itswitch,itdimmer".
+  $hash->{AttrList}  = "IODev ITrepetition do_not_notify:0,1 showtime:0,1 ignore:0,1 model:itremote,itswitch,itdimmer".
   $readingFnAttributes;
 }
 
@@ -188,7 +188,7 @@ sub FHEMduino_PT2262_Set($@){ ##################################################
  }
  my $io = $hash->{IODev};
 
-  ## Do we need to change RFMode to SlowRF??
+ ## Do we need to change RFMode to SlowRF?? // Not implemented in fhemduino -> see fhemduino.pm
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"switch_rfmode"})) {
   	if ($attr{$a[0]}{"switch_rfmode"} eq "1") {			# do we need to change RFMode of IODev
       my $ret = CallFn($io->{NAME}, "AttrFn", "set", ($io->{NAME}, "rfmode", "SlowRF"));
@@ -198,21 +198,25 @@ sub FHEMduino_PT2262_Set($@){ ##################################################
   ## Do we need to change ITrepetition ??	
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"ITrepetition"})) {
   	$message = "isr".$attr{$a[0]}{"ITrepetition"};
-    CUL_SimpleWrite($io, $message);
-    Log GetLogLevel($a[0],4), "FHEMduino_PT2262 set ITrepetition: $message for $io->{NAME}";
+    $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
+    if ($msg =~ m/raw => $message/) {
+ 	  Log GetLogLevel($a[0],4), "FHEMduino_PT2262: Set ITrepetition: $message for $io->{NAME}";
+    } else {
+ 	  Log GetLogLevel($a[0],4), "FHEMduino_PT2262: Error set ITrepetition: $message for $io->{NAME}";
+    }
   }
 
-  ## Do we need to change ITfrequency ??	
-  if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"ITfrequency"})) {
-    my $f = $attr{$a[0]}{"ITfrequency"}/26*65536;
-    my $f2 = sprintf("%02x", $f / 65536);
-    my $f1 = sprintf("%02x", int($f % 65536) / 256);
-    my $f0 = sprintf("%02x", $f % 256);
-    
-    my $arg = sprintf("%.3f", (hex($f2)*65536+hex($f1)*256+hex($f0))/65536*26);
-    Log GetLogLevel($a[0],4), "Setting ITfrequency (0D,0E,0F) to $f2 $f1 $f0 = $arg MHz";
-    CUL_SimpleWrite($hash, "if$f2$f1$f0");
-  }
+  ## Do we need to change ITfrequency ??	// Not implemented in fhemduino
+ # if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"ITfrequency"})) {
+ #   my $f = $attr{$a[0]}{"ITfrequency"}/26*65536;
+ #   my $f2 = sprintf("%02x", $f / 65536);
+ #   my $f1 = sprintf("%02x", int($f % 65536) / 256);
+ #   my $f0 = sprintf("%02x", $f % 256);
+ #   
+ #   my $arg = sprintf("%.3f", (hex($f2)*65536+hex($f1)*256+hex($f0))/65536*26);
+ #   Log GetLogLevel($a[0],4), "Setting ITfrequency (0D,0E,0F) to $f2 $f1 $f0 = $arg MHz";
+ #   CUL_SimpleWrite($hash, "if$f2$f1$f0");
+ # }
 
   my $v = join(" ", @a);
   $message = "is".uc($hash->{XMIT}.$hash->{$c});
@@ -226,10 +230,22 @@ sub FHEMduino_PT2262_Set($@){ ##################################################
   $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
   if ($msg =~ m/raw => $message/) {
     Log3 $hash, 5, "Answer from $io->{NAME}: $msg";
+  } else {
+    Log3 $hash, 5, "FHEMduino_PT2262 IODev device didn't answer is command correctly: $msg";
+  }
 
+  ## Do we need to change ITrepetition back??	
+  if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"ITrepetition"})) {
+  	$message = "isr".$it_defrepetition;
+    $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
+    if ($msg =~ m/raw => $message/) {
+ 	  Log GetLogLevel($a[0],4), "FHEMduino_PT2262: Set ITrepetition back: $message for $io->{NAME}";
     } else {
-      Log3 $hash, 5, "FHEMduino_PT2262 IODev device didn't answer is command correctly: $msg";
+ 	  Log GetLogLevel($a[0],4), "FHEMduino_PT2262: Error ITrepetition back: $message for $io->{NAME}";
     }
+  }
+
+
   # Look for all devices with the same code, and set state, timestamp
   my $code = "$hash->{XMIT}";
   my $name = "$hash->{NAME}";
