@@ -44,7 +44,7 @@ my %matchListSlowRF = (
     "7:FHEMduino_DCF77"    => "D...............\$",
     "8:FHEMduino_FA20RF"   => "F............\$",
     "9:FHEMduino_Gas"      => "G...........\$",
-	"10:FHEMduino_Oregon"  => "OSV.*\$",
+    "10:FHEMduino_Oregon"  => "OSV2:.*\$",
 );
 
 sub
