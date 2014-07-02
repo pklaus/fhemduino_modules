@@ -14,9 +14,12 @@ use warnings;
 
 #####################################
 sub
-FHEMduino__Initialize($)
+FHEMduino_Oregon_Initialize($)
 {
+# Jörg: Es fehlte das _Orgegon_
+
   my ($hash) = @_;
+
 #					  9ADC539970205024
 #					  EA4C10E45016D083
   # output format is "AAAACRRBTTTS"
@@ -68,7 +71,8 @@ FHEMduino_Oregon_Undef($$)
 
 #########################################
 # From xpl-perl/lib/xPL/Util.pm:
-/
+=head1
+/* Jörg: Funktioniert in Perl nicht. Eigenlich kennt Perl nur # ... =head1 leitet eine Dokumentation ein
 sub OREGON_hi_nibble {
   ($_[0]&0xf0)>>4;
 }
@@ -85,7 +89,8 @@ sub OREGON_nibble_sum {
   $s += OREGON_hi_nibble($_[1]->[$_[0]]) if (int($_[0]) != $_[0]);
   return $s;
 }
-*/
+*/ Jörg: =cut beendet die Doku
+=cut
 # --------------------------------------------
 # The following functions are changed:
 #	- some parameter like "parent" and others are removed
@@ -105,6 +110,7 @@ sub OREGON_temperature {
        		current => $temp,
 		units => 'Grad Celsius'
   	}
+} # Jörg: Schliessende Klammer fehlte
 
 sub OREGON_percentage_battery {
   my ($nibble, $dev, $res) = @_;
@@ -130,19 +136,19 @@ sub
 FHEMduino_Oregon_Parse($$)
 {
   my ($hash,$msg) = @_;
-  
+  my $deviceCode; # Jörg: muss deklariert sein. Deklaration im if/else funktioniert nicht.
+
   # -
-  //my @a = split("", $msg);
+  my @a = split("", $msg); # # Jörg: Auskommentieren geht nur mit #, nicht mit /
   my @a = unpack("(A2)*", $msg);
   
-  
-  if ( $a2 == d && $a3==c)
-  {
-    my $deviceCode = $a[2].$a[3];
-   } else
-   {
-   my $deviceCode = $a[0].$a[1].$a[2].$a[3];
-   }
+# Jörg: Was ist d und c, wo kommen die her?  
+#  if ( $a[2] == d && $a[3] == c)
+#  {
+#    $deviceCode = $a[2].$a[3];
+#  } else {
+#    $deviceCode = $a[0].$a[1].$a[2].$a[3];
+#  }
   
   my $def = $modules{FHEMduino_Oregon}{defptr}{$hash->{NAME} . "." . $deviceCode};
   $def = $modules{FHEMduino_Oregon}{defptr}{$deviceCode} if(!$def);
