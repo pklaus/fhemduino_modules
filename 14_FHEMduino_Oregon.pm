@@ -13,8 +13,7 @@ use warnings;
 # * reset last reading einbauen
 
 #####################################
-sub
-FHEMduino_Oregon_Initialize($)
+sub FHEMduino_Oregon_Initialize($)
 {
 # Jörg: Es fehlte das _Orgegon_
 
@@ -32,7 +31,7 @@ FHEMduino_Oregon_Initialize($)
   #   S = Sign								   Nibble 11
   
 
-  $hash->{Match}     = "^K...........";
+  $hash->{Match}     = "^OSV.*";
   $hash->{DefFn}     = "FHEMduino_Oregon_Define";
   $hash->{UndefFn}   = "FHEMduino_Oregon_Undef";
   $hash->{AttrFn}    = "FHEMduino_Oregon_Attr";
@@ -42,8 +41,7 @@ FHEMduino_Oregon_Initialize($)
 
 
 #####################################
-sub
-FHEMduino_Oregon_Define($$)
+sub FHEMduino_Oregon_Define($$)
 {
   my ($hash, $def) = @_;
   my @a = split("[ \t][ \t]*", $def);
@@ -61,8 +59,7 @@ FHEMduino_Oregon_Define($$)
 }
 
 #####################################
-sub
-FHEMduino_Oregon_Undef($$)
+sub FHEMduino_Oregon_Undef($$)
 {
   my ($hash, $name) = @_;
   delete($modules{FHEMduino_Oregon}{defptr}{$hash->{CODE}}) if($hash && $hash->{CODE});
@@ -96,7 +93,7 @@ sub OREGON_nibble_sum {
 #	- some parameter like "parent" and others are removed
 #	- @res array return the values directly (no usage of xPL::Message)
 
-sub OREGON_temperature {
+sub FHEMduino_Oregon_temperature {
   my ($nibble, $dev, $res) = @_;
 
   my $temp =
@@ -110,9 +107,8 @@ sub OREGON_temperature {
        		current => $temp,
 		units => 'Grad Celsius'
   	}
-} # Jörg: Schliessende Klammer fehlte
-
-sub OREGON_percentage_battery {
+} 
+sub  FHEMduino_Oregon_percentage_battery {
   my ($nibble, $dev, $res) = @_;
 
   my $battery;
@@ -132,23 +128,21 @@ sub OREGON_percentage_battery {
 }
 	
 #####################################
-sub
-FHEMduino_Oregon_Parse($$)
+sub FHEMduino_Oregon_Parse($$)
 {
   my ($hash,$msg) = @_;
   my $deviceCode; # Jörg: muss deklariert sein. Deklaration im if/else funktioniert nicht.
 
   # -
-  my @a = split("", $msg); # # Jörg: Auskommentieren geht nur mit #, nicht mit /
+  # my @a = split("", $msg); # # Jörg: Auskommentieren geht nur mit #, nicht mit /
   my @a = unpack("(A2)*", $msg);
   
-# Jörg: Was ist d und c, wo kommen die her?  
-#  if ( $a[2] == d && $a[3] == c)
-#  {
-#    $deviceCode = $a[2].$a[3];
-#  } else {
-#    $deviceCode = $a[0].$a[1].$a[2].$a[3];
-#  }
+  if ( $a[2] eq "d" && $a[3] eq "c")
+  {
+    $deviceCode = $a[2].$a[3];
+  } else {
+    $deviceCode = $a[0].$a[1].$a[2].$a[3];
+  }
   
   my $def = $modules{FHEMduino_Oregon}{defptr}{$hash->{NAME} . "." . $deviceCode};
   $def = $modules{FHEMduino_Oregon}{defptr}{$deviceCode} if(!$def);
@@ -161,73 +155,74 @@ FHEMduino_Oregon_Parse($$)
   my $name = $hash->{NAME};
   return "" if(IsIgnored($name));
   
-  my $val = "";
-  my ($tmp, $hum, $bat, $sendMode, $trend);
+  #my $val = "";
+  #my ($tmp, $hum, $bat, $sendMode, $trend);
 
   
-  $bat = int($a[3]) == "0" ? "good" : "critical";
+  #$bat = int($a[3]) == "0" ? "good" : "critical";
 
-  if (int($a[4]) == 1)
-  {
-    $trend = "rising";
-  }
-  elsif (int($a[4]) == 2)
-  {
-    $trend = "falling";
-  }
-  else
-  {
-    $trend = "stable";
-  }
+  #if (int($a[4]) == 1)
+  #{
+  #  $trend = "rising";
+  #}
+  #elsif (int($a[4]) == 2)
+  #{
+  #  $trend = "falling";
+  #}
+  #else
+  #{
+  #  $trend = "stable";
+  #}
   
 
-  $sendMode = int($a[5]) == 0 ? "automatic" : "manual";
-  $tmp = int($a[6].$a[7].$a[8].$a[9])/10.0;
-  $hum = int($a[10].$a[11]);
+  #$sendMode = int($a[5]) == 0 ? "automatic" : "manual";
+  #$tmp = int($a[6].$a[7].$a[8].$a[9])/10.0;
+  #$hum = int($a[10].$a[11]);
   
-  $val = "T $tmp H $hum";
+  #$val = "T $tmp H $hum";
+  my %device_data;
+  
+  #FHEMduino_Oregon_temperature($a,$dev,$hash);
+  #if(!$device_data) {
+  #  Log3 $name, 1, "FHEMduino_Oregon $deviceCode Cannot decode $msg";
+  #  return "";
+  #}
+  #if ($hash->{lastReceive} && (time() - $hash->{lastReceive} < 300)) {
+  # if ($hash->{lastValues} && (abs(abs($hash->{lastValues}{temperature}) - abs($tmp)) > 5)) {
+  #
+  # Log3 $name, 1, "FHEMduino_Oregon $deviceCode Temperature jump too large";
+  #    return "";
+  #  }
 
 
-  if(!$val) {
-    Log3 $name, 1, "FHEMduino_Oregon $deviceCode Cannot decode $msg";
-    return "";
-  }
-  if ($hash->{lastReceive} && (time() - $hash->{lastReceive} < 300)) {
-    if ($hash->{lastValues} && (abs(abs($hash->{lastValues}{temperature}) - abs($tmp)) > 5)) {
-      Log3 $name, 1, "FHEMduino_Oregon $deviceCode Temperature jump too large";
-      return "";
-    }
+  #  if ($hash->{lastValues} && (abs(abs($hash->{lastValues}{humidity}) - abs($hum)) > 5)) {
+  #    Log3 $name, 1, "FHEMduino_Oregon $deviceCode Humidity jump too large";
+  #    return "";
+  #  }
+  #}
+  #else {
+  #  Log3 $name, 1, "FHEMduino_Oregon $deviceCode Skipping override due to too large timedifference";
+  #}
+  #$hash->{lastReceive} = time();
+  #$hash->{lastValues}{temperature} = $tmp;
+  #$hash->{lastValues}{humidity} = $hum;
 
 
-    if ($hash->{lastValues} && (abs(abs($hash->{lastValues}{humidity}) - abs($hum)) > 5)) {
-      Log3 $name, 1, "FHEMduino_Oregon $deviceCode Humidity jump too large";
-      return "";
-    }
-  }
-  else {
-    Log3 $name, 1, "FHEMduino_Oregon $deviceCode Skipping override due to too large timedifference";
-  }
-  $hash->{lastReceive} = time();
-  $hash->{lastValues}{temperature} = $tmp;
-  $hash->{lastValues}{humidity} = $hum;
+#  Log3 $name, 4, "FHEMduino_Oregon $name: $val";
 
-
-  Log3 $name, 4, "FHEMduino_Oregon $name: $val";
-
-  readingsBeginUpdate($hash);
-  readingsBulkUpdate($hash, "state", $val);
-  readingsBulkUpdate($hash, "temperature", $tmp);
-  readingsBulkUpdate($hash, "humidity", $hum);
-  readingsBulkUpdate($hash, "battery", $bat);
-  readingsBulkUpdate($hash, "trend", $trend);
-  readingsBulkUpdate($hash, "sendMode", $sendMode);
+#  readingsBeginUpdate($hash);
+#  readingsBulkUpdate($hash, "state", $val);
+#  readingsBulkUpdate($hash, "temperature", $tmp);
+#  readingsBulkUpdate($hash, "humidity", $hum);
+#  readingsBulkUpdate($hash, "battery", $bat);
+#  readingsBulkUpdate($hash, "trend", $trend);
+#  readingsBulkUpdate($hash, "sendMode", $sendMode);
   readingsEndUpdate($hash, 1); # Notify is done by Dispatch
 
   return $name;
 }
 
-sub
-FHEMduino_Oregon_Attr(@)
+sub FHEMduino_Oregon_Attr(@)
 {
   my @a = @_;
 
