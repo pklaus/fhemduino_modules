@@ -32,7 +32,7 @@ my %sets = (
   "time"      => ""
 );
 
-my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_PT2262:FHEMduino_NC_WS:FHEMduino_EuroChr:FHEMduino_DCF77:FHEMduino_FA20RF:FHEMduino_GAS:FHEMduino_Oregon:";
+my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_KW9010:FHEMduino_PT2262:FHEMduino_NC_WS:FHEMduino_EuroChr:FHEMduino_DCF77:FHEMduino_FA20RF:FHEMduino_GAS:";
 
 my %matchListSlowRF = (
     "1:IT"                 => "^i......\$",
@@ -40,10 +40,10 @@ my %matchListSlowRF = (
     "3:FHEMduino_KW9010"   => "K...........\$",
     "4:FHEMduino_PT2262"   => "IR.*\$",
     "5:FHEMduino_NC_WS"    => "L............\$",
-    "6:FHEMduino_EuroChr"  => "T.............\$",
+    "6:FHEMduino_EuroChr"  => "C.............\$",
     "7:FHEMduino_DCF77"    => "D...............\$",
     "8:FHEMduino_FA20RF"   => "F............\$",
-    "9:FHEMduino_Gas"      => "G...........\$",
+    "9:CUL_TX"             => "^TX..........",        # Need TX to avoid FHTTK
     "10:FHEMduino_Oregon"  => "OSV2:.*\$",
 );
 
@@ -500,8 +500,13 @@ FHEMduino_Parse($$$$)
   ### implement error checking here!
   ;
   }
-  elsif($fn eq "T" && $len >= 2) {          # EuroChron / Tchibo
+  elsif($fn eq "C" && $len >= 2) {          # EuroChron / Tchibo
     Log3 $name, 4, "EuTch: $dmsg";
+  ### implement error checking here!
+  ;
+  }
+  elsif($fn eq "T" && $len >= 2) {          # Technoline TX2/3/4
+    Log3 $name, 4, "CUL_TX: $dmsg";
   ### implement error checking here!
   ;
   }
@@ -520,16 +525,10 @@ FHEMduino_Parse($$$$)
   ### implement error checking here!
   ;
   }
-    elsif($fn eq "G" && $len >= 2) {        # Gas
+    elsif($fn eq "O" && $len >= 2) {        # Oregon
   ### implement error checking here!
   ;
   }
-  elsif($fn eq "I" && $len >= 8) {			# ELRO
-	Dispatch($hash, $dmsg, undef);
-  ### implement error checking here!
-  ;
-  }
-
   else {
     DoTrigger($name, "UNKNOWNCODE $dmsg message length ($len)");
     Log3 $name, 2, "$name: unknown message $dmsg message length ($len)";
@@ -609,22 +608,37 @@ FHEMduino_Attr(@)
 
   <table>
   <tr><td>
-  The FHEMduino/CUR/CUN is a family of RF devices sold by <a
-  href="http://www.busware.de">busware.de</a>.
+  The FHEMduino ia based on an idea from mdorenka published at <a
+  href="http://forum.fhem.de/index.php/topic,17196.0.html">FHEM Forum</a>.
 
   With the opensource firmware (see this <a
-  href="http://FHEMduinofw.de/FHEMduinofw.html">link</a>) they are capable
-  to receive and send different 868MHz protocols (FS20/FHT/S300/EM/HMS).
-  It is even possible to use these devices as range extenders/routers, see the
-  <a href="#FHEMduino_RFR">FHEMduino_RFR</a> module for details.
-  <br> <br>
-
-  Some protocols (FS20, FHT and KS300) are converted by this module so that
-  the same logical device can be used, irrespective if the radio telegram is
-  received by a FHEMduino or an FHZ device.<br> Other protocols (S300/EM) need their
-  own modules. E.g. S300 devices are processed by the FHEMduino_WS module if the
-  signals are received by the FHEMduino, similarly EMWZ/EMGZ/EMEM is handled by the
-  FHEMduino_EM module.<br><br>
+  href="https://github.com/mdorenka">link</a>) they are capable
+  to receive and send different 433MHz protocols.
+  <br><br>
+  
+  The following protocols are available:
+  <br><br>
+  
+  Date / Time protocol  <br>
+  DCF-77 --> 14_FHEMduino_DCF77.pm <br>
+  <br><br>
+  
+  Wireless switches  <br>
+  PT2262 (IT / ELRO switches) --> 14_FHEMduino_PT2262.pm <br>
+  <br><br>
+  
+  Smoke detector   <br>
+  Flamingo FA20RF / ELRO RM150RF  --> 14_FHEMduino_FA20RF.pm<br>
+  <br><br>
+  
+  Temperatur / humidity sensors  <br>
+  KW9010  --> 14_FHEMduino_KW9010.pm<br>
+  PEARL NC7159, LogiLink WS0002  --> 14_FHEMduino_NZ_WS.pm<br>
+  EUROCHRON / Tchibo  --> 14_FHEMduino_EuroChr.pm<br>
+  LIFETEC  --> 14_FHEMduino_KW9010.pm<br>
+  TX70DTH  --> 14_FHEMduino_KW9010.pm<br>
+  Intertechno TX2/3/4  --> CUL_TX.pm<br>
+  <br><br>
 
   It is possible to attach more than one device in order to get better
   reception, fhem will filter out duplicate messages.<br><br>
@@ -632,7 +646,6 @@ FHEMduino_Attr(@)
   Note: this module may require the Device::SerialPort or Win32::SerialPort
   module if you attach the device via USB and the OS sets strange default
   parameters for serial devices.
-
 
   </td><td>
   <img src="ccc.jpg"/>
@@ -645,8 +658,8 @@ FHEMduino_Attr(@)
     <code>define &lt;name&gt; FHEMduino &lt;device&gt; &lt;FHTID&gt;</code> <br>
     <br>
     USB-connected devices (FHEMduino/CUR/CUN):<br><ul>
-      &lt;device&gt; specifies the serial port to communicate with the FHEMduino or
-      CUR.  The name of the serial-device depends on your distribution, under
+      &lt;device&gt; specifies the serial port to communicate with the FHEMduino.
+	  The name of the serial-device depends on your distribution, under
       linux the cdc_acm kernel module is responsible, and usually a
       /dev/ttyACM0 device will be created. If your distribution does not have a
       cdc_acm module, you can force usbserial to handle the FHEMduino by the
@@ -663,18 +676,6 @@ FHEMduino_Attr(@)
       defaults for the serial parameters, e.g. some Linux distributions and
       OSX.  <br><br>
 
-    </ul>
-    Network-connected devices (CUN):<br><ul>
-    &lt;device&gt; specifies the host:port of the device. E.g.
-    192.168.0.244:2323
-    </ul>
-    <br>
-    If the device is called none, then no device will be opened, so you
-    can experiment without hardware attached.<br>
-
-    The FHTID is a 4 digit hex number, and it is used when the FHEMduino/CUR talks to
-    FHT devices or when CUR requests data. Set it to 0000 to avoid answering
-    any FHT80b request by the FHEMduino.
   </ul>
   <br>
 
@@ -686,34 +687,6 @@ FHEMduino_Attr(@)
         href="http://FHEMduinofw.de/commandref.html">this</a> document
         for details on FHEMduino commands.
         </li><br>
-
-    <li>freq / bWidth / rAmpl / sens<br>
-        <a href="#rfmode">SlowRF</a> mode only.<br>
-        Set the FHEMduino frequency / bandwidth / receiver-amplitude / sensitivity<br>
-
-        Use it with care, it may destroy your hardware and it even may be
-        illegal to do so. Note: the parameters used for RFR transmission are
-        not affected.<br>
-        <ul>
-        <li>freq sets both the reception and transmission frequency. Note:
-            although the CC1101 can be set to frequencies between 315 and 915
-            MHz, the antenna interface and the antenna of the FHEMduino is tuned for
-            exactly one frequency. Default is 868.3MHz (or 433MHz)</li>
-        <li>bWidth can be set to values between 58kHz and 812kHz. Large values
-            are susceptible to interference, but make possible to receive
-            inaccurate or multiple transmitters. It affects tranmission too.
-            Default is 325kHz.</li>
-        <li>rAmpl is receiver amplification, with values between 24 and 42 dB.
-            Bigger values allow reception of weak signals. Default is 42.
-            </li>
-        <li>sens is the decision boundery between the on and off values, and it
-            is 4, 8, 12 or 16 dB.  Smaller values allow reception of less clear
-            signals. Default is 4dB.</li>
-        </ul>
-        </li><br>
-    <li>led<br>
-        Set the FHEMduino led off (00), on (01) or blinking (02).
-        </li><br>
   </ul>
 
   <a name="FHEMduinoget"></a>
@@ -722,40 +695,16 @@ FHEMduino_Attr(@)
     <li>version<br>
         return the FHEMduino firmware version
         </li><br>
-    <li>uptime<br>
-        return the FHEMduino uptime (time since FHEMduino reset).
-        </li><br>
     <li>raw<br>
         Issue a FHEMduino firmware command, and wait for one line of data returned by
         the FHEMduino. See the FHEMduino firmware README document for details on FHEMduino
         commands.
         </li><br>
-    <li>fhtbuf<br>
-        FHEMduino has a message buffer for the FHT. If the buffer is full, then newly
-        issued commands will be dropped, and an "EOB" message is issued to the
-        fhem log.
-        <code>fhtbuf</code> returns the free memory in this buffer (in hex),
-        an empty buffer in the FHEMduino-V2 is 74 bytes, in FHEMduino-V3/CUN 200 Bytes.
-        A message occupies 3 + 2x(number of FHT commands) bytes,
-        this is the second reason why sending multiple FHT commands with one
-        <a href="#set">set</a> is a good idea. The first reason is, that
-        these FHT commands are sent at once to the FHT.
-        </li> <br>
-
-    <li>ccconf<br>
-        Read some FHEMduino radio-chip (cc1101) registers (frequency, bandwidth, etc),
-        and display them in human readable form.
-        </li><br>
-
     <li>cmds<br>
         Depending on the firmware installed, FHEMduinos have a different set of
         possible commands. Please refer to the README of the firmware of your
         FHEMduino to interpret the response of this command. See also the raw-
         command.
-        </li><br>
-    <li>credit10ms<br>
-        One may send for a duration of credit10ms*10 ms before the send limit is reached and a LOVF is
-        generated.
         </li><br>
   </ul>
 
@@ -766,38 +715,6 @@ FHEMduino_Attr(@)
     <li><a href="#attrdummy">dummy</a></li>
     <li><a href="#showtime">showtime</a></li>
     <li><a href="#model">model</a> (FHEMduino,CUN,CUR)</li>
-    <li><a name="sendpool">sendpool</a><br>
-        If using more than one FHEMduino/CUN for covering a large area, sending
-        different events by the different FHEMduino's might disturb each other. This
-        phenomenon is also known as the Palm-Beach-Resort effect.
-        Putting them in a common sendpool will serialize sending the events.
-        E.g. if you have three CUN's, you have to specify following
-        attributes:<br>
-        attr CUN1 sendpool CUN1,CUN2,CUN3<br>
-        attr CUN2 sendpool CUN1,CUN2,CUN3<br>
-        attr CUN3 sendpool CUN1,CUN2,CUN3<br>
-        </li><br>
-    <li><a name="addvaltrigger">addvaltrigger</a><br>
-        Create triggers for additional device values. Right now these are RSSI
-        and RAWMSG for the FHEMduino family and RAWMSG for the FHZ.
-        </li><br>
-    <li><a name="rfmode">rfmode</a><br>
-        Configure the RF Transceiver of the FHEMduino (the CC1101). Available
-        arguments are:
-        <ul>
-        <li>SlowRF<br>
-            To communicate with FS20/FHT/HMS/EM1010/S300/Hoermann devices @1kHz
-            datarate. This is the default.</li>
-
-        <li>HomeMatic<br>
-            To communicate with HomeMatic type of devices @20kHz datarate</li>
-
-        <li>MAX<br>
-            To communicate with MAX! type of devices @20kHz datarate</li>
-
-        </ul>
-        </li><br>
-  
   </ul>
   <br>
 </ul>
