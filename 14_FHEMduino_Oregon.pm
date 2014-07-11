@@ -1,6 +1,7 @@
 ###########################################
 # FHEMduino Oregon Scienfific Modul (Remote Weather sensor)
 # $Id: 14_FHEMduino_Oregon.pm 0001 2014-06-25 sidey $
+# Based on 41_Oregon.pm from Willi Herzig (Willi.Herzig@gmail.com)
 ##############################################
 package main;
 
@@ -8,7 +9,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-
+#require 41_Oregon;
 # TODO
 # 
 # * reset last reading einbauen
@@ -16,7 +17,7 @@ use Data::Dumper;
 #####################################
 sub FHEMduino_Oregon_Initialize($)
 {
-# Jˆrg: Es fehlte das _Orgegon_
+# J√∂rg: Es fehlte das _Orgegon_
 
   my ($hash) = @_;
 
@@ -96,23 +97,75 @@ sub FHEMduino_Oregon_lo_nibble {
 #	- some parameter like "parent" and others are removed
 #	- @res array return the values directly (no usage of xPL::Message)
 
-sub FHEMduino_Oregon_temperature {
-  my (@bytes, $dev, $res) = @_;
+my $DOT = q{_};
 
-  # my $temp = (($nibble[11]&0x8) ? -1 : 1) * ($nibble[9]*10 + $nibble[10] + $nibble[8])/10;
-  my $temp = (($bytes[6]&0x8) ? -1 : 1) *
-           (FHEMduino_Oregon_hi_nibble($bytes[5])*10 + FHEMduino_Oregon_lo_nibble($bytes[5]) +
-           FHEMduino_Oregon_hi_nibble($bytes[4])/10);
- # print Dumper($temp);
+# Test if to use longid for device type
+sub FHEMduino_Oregon_use_longid {
+  my ($longids,$dev_type) = @_;
+
+  return 0 if ($longids eq "");
+  return 0 if ($longids eq "NONE");
+  return 0 if ($longids eq "0");
+
+  return 1 if ($longids eq "1");
+  return 1 if ($longids eq "ALL");
+
+  return 1 if(",$longids," =~ m/,$dev_type,/);
+
+  return 0;
+}
+
+sub FHEMduino_Oregon_simple_battery {
+  my ($bytes, $dev, $res) = @_;
+  my $battery_low = $bytes->[4]&0x4;
+  #my $bat = $battery_low ? 10 : 90;
+  my $battery = $battery_low ? "low" : "ok";
+  push @$res, {
+		device => $dev,
+		type => 'battery',
+		current => $battery,
+		units => '%',
+	}
+}
+
+
+sub FHEMduino_Oregon_common_temp {
+  my ($type, $longids, $bytes) = $_;
+  
+  
+  print "common_temp bytes:".Dumper($bytes);
+  my $device = sprintf "%02x", $bytes->[3];
+  #my $dev_str = $type.$DOT.$device;
+  my $dev_str = $type;
+  if (FHEMduino_Oregon_use_longid($longids,$type)) {
+  	$dev_str .= $DOT.sprintf("%02x", $bytes->[3]);
+  }
+  if (FHEMduino_Oregon_hi_nibble($bytes->[2]) > 0) {
+  	$dev_str .= $DOT.sprintf("%d", FHEMduino_Oregon_hi_nibble($bytes->[2]));
+  }
+
+  my @res = ();
+  FHEMduino_Oregon_temperature($bytes, $dev_str, \@res);
+  FHEMduino_Oregon_simple_battery($bytes, $dev_str, \@res);
+  return @res;
+}
+
+sub FHEMduino_Oregon_temperature {
+  my ($bytes, $dev, $res) = @_;
+
+  my $temp =
+    (($bytes->[6]&0x8) ? -1 : 1) *
+      (FHEMduino_Oregon_hi_nibble($bytes->[5])*10 + FHEMduino_Oregon_lo_nibble($bytes->[5]) +
+       FHEMduino_Oregon_hi_nibble($bytes->[4])/10);
 
   push @$res, {
        		device => $dev,
        		type => 'temp',
        		current => $temp,
 		units => 'Grad Celsius'
-  	}
-	
-} 
+       } 
+}
+
 sub  FHEMduino_Oregon_percentage_battery {
   my ($nibble, $dev, $res) = @_;
 
@@ -138,21 +191,55 @@ sub  FHEMduino_Oregon_percentage_battery {
 #####################################
 sub FHEMduino_Oregon_Parse($$)
 {
+  
   my ($hash,$msg) = @_;
-  my $deviceCode; # Jˆrg: muss deklariert sein. Deklaration im if/else funktioniert nicht.
+  my $deviceCode; 
 
-  # -
-  # my @a = split("", $msg); # # Jˆrg: Auskommentieren geht nur mit #, nicht mit /
-  my @a = unpack("(A2)*", substr $msg, 5);
-  #print Dumper($msg);
+  my $longids = 1;
+  if (defined($attr{$hash->{NAME}}{longids})) {
+  	$longids = $attr{$hash->{NAME}}{longids};
+  	Log 3,"0: attr longids = $longids";
+  }
+
+
+  print "Orig msg:".Dumper($msg);
+  my $hex_msg = substr $msg, 5;
+  print "Hex msg:".Dumper($hex_msg);
+  
+  my @a = unpack("(A2)*", );
+  # convert to binary
+  my $bin_msg = pack('H*', substr $msg, 5);
+  #print "Bin msg:".Dumper($bin_msg);
+  
+  # convert string to array of bytes. Skip length byte
+  my @data_array = ();
+  foreach (split(//, $bin_msg)) {
+    push (@data_array, ord($_) );
+  }
+
+  
+  my $bits = ord($bin_msg);
+  my $num_bytes = $bits >> 3; if (($bits & 0x7) != 0) { $num_bytes++; }
+
+  my $type1 = $data_array[0];
+  my $type2 = $data_array[1];
+	
+  my $type = ($type1 << 8) + $type2;
+
+  my $sensor_id = unpack('H*', chr $type1) . unpack('H*', chr $type2);
+  Log 1, "FHEMduino_Oregon: sensor_id=$sensor_id";  
+  
+  #print "Type:".Dumper($type);
+  #print "Type1:".Dumper($type1);
+  #print "Type2:".Dumper($type2);
   #print Dumper($a[1]);
 
   
-  if ( $a[1] eq "DC") 
+  if ( $type2 == 220)  ##220=DC(hex)
   {
-    $deviceCode = $a[1]; #$a[0] ist ein rollierender code
+    $deviceCode = unpack('H*', chr $type2); #type1 ist ein rollierender code
   } else {
-    $deviceCode = $a[1].$a[2];
+    $deviceCode = $sensor_id
   }
   
   my $def = $modules{FHEMduino_Oregon}{defptr}{$hash->{NAME} . "." . $deviceCode};
@@ -166,7 +253,7 @@ sub FHEMduino_Oregon_Parse($$)
   my $name = $hash->{NAME};
   return "" if(IsIgnored($name));
   
-  Log3 $name, 4, "FHEMduino_Oregon $name ($msg)";  
+  Log3 $name, 3, "FHEMduino_Oregon $name ($msg)";  
 
   if($hash->{lastReceive} && (time() - $hash->{lastReceive} < $def->{minsecs} )) {
     if (($def->{lastMSG} ne $msg) && ($def->{equalMSG} > 0)) {
@@ -178,17 +265,24 @@ sub FHEMduino_Oregon_Parse($$)
   }
   
   
+  # Pr√ºfen ob der Datenstrom gro√ü genug ist
+ if (scalar(@data_array) < 7)
+ {
+   Log3 $name, 4, "FHEMduino_Oregon $name: $deviceCode Skipping code is to short $msg";
+       return "FHEMduino_Oregon $name: $deviceCode Skipping code is to short $msg";
+ }
   my %device_data;
   
   my @res = ();
   
-  # Pr¸fen ob $a genug stellen hat
- if (scalar(@a) <= 6)
- {
-   Log3 $name, 4, "FHEMduino_Oregon $name: $deviceCode Skipping code is to short $msg";
- }
+
  
- FHEMduino_Oregon_temperature(@a,$def,\@res);
+ #FHEMduino_Oregon_temperature(\@a,$def,\@res);
+ my $part= "THN132N";
+ print Dumper(@data_array);
+
+ @res=FHEMduino_Oregon_common_temp($part,$longids,\@data_array);
+ 
  print Dumper(@res);
   $hash->{lastReceive} = time();
   #$hash->{lastValues}{temperature} = $tmp;
@@ -223,7 +317,7 @@ sub FHEMduino_Oregon_Parse($$)
 
 #  Log3 $name, 4, "FHEMduino_Oregon $name: $val";
 
-#  readingsBeginUpdate($hash);
+   readingsBeginUpdate($hash);
 #  readingsBulkUpdate($hash, "state", $val);
 #  readingsBulkUpdate($hash, "temperature", $tmp);
 #  readingsBulkUpdate($hash, "humidity", $hum);
