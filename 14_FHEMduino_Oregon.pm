@@ -376,7 +376,7 @@ sub FHEMduino_Oregon_Attr(@)
   <a name="FHEMduino_Oregondefine"></a>
   <b>Define</b>
   <ul>
-    <code>define &lt;name&gt; FHEMduino_NC_WS &lt;code&gt; [minsecs] [equalmsg]</code> <br>
+    <code>define &lt;name&gt; FHEMduino_Oregon &lt;code&gt; [minsecs] [equalmsg]</code> <br>
     <br>
  
     &lt;code&gt; ist der sensor ID Code des Snesors und besteht aus der
