@@ -130,10 +130,10 @@ sub FHEMduino_Oregon_simple_battery {
 
 
 sub FHEMduino_Oregon_common_temp {
-  my ($type, $longids, $bytes) = $_;
+  my ($type, $longids, $bytes) = @_;
   
   
-  print "common_temp bytes:".Dumper($bytes);
+  #print "common_temp bytes:".Dumper($bytes);
   my $device = sprintf "%02x", $bytes->[3];
   #my $dev_str = $type.$DOT.$device;
   my $dev_str = $type;
@@ -202,16 +202,16 @@ sub FHEMduino_Oregon_Parse($$)
   }
 
 
-  print "Orig msg:".Dumper($msg);
+  #print "Orig msg:".Dumper($msg);
   my $hex_msg = substr $msg, 5;
-  print "Hex msg:".Dumper($hex_msg);
+  #print "Hex msg:".Dumper($hex_msg);
   
   my @a = unpack("(A2)*", );
   # convert to binary
   my $bin_msg = pack('H*', substr $msg, 5);
   #print "Bin msg:".Dumper($bin_msg);
   
-  # convert string to array of bytes. Skip length byte
+  # convert string to array of bytes. 
   my @data_array = ();
   foreach (split(//, $bin_msg)) {
     push (@data_array, ord($_) );
@@ -274,16 +274,16 @@ sub FHEMduino_Oregon_Parse($$)
   my %device_data;
   
   my @res = ();
-  
-
  
- #FHEMduino_Oregon_temperature(\@a,$def,\@res);
- my $part= "THN132N";
- print Dumper(@data_array);
+ #my $part= "THN132N";
+ my $part= $sensor_id;
+ #print Dumper(@data_array);
 
+ my $ref = \@data_array;
+ #print "Referenz:".Dumper($ref->[1]);
  @res=FHEMduino_Oregon_common_temp($part,$longids,\@data_array);
  
- print Dumper(@res);
+ #print Dumper(@res);
   $hash->{lastReceive} = time();
   #$hash->{lastValues}{temperature} = $tmp;
   #$hash->{lastValues}{humidity} = $hum;
@@ -310,16 +310,33 @@ sub FHEMduino_Oregon_Parse($$)
   #else {
   #  Log3 $name, 1, "FHEMduino_Oregon $deviceCode Skipping override due to too large timedifference";
   #}
-  #$hash->{lastReceive} = time();
+  $hash->{lastReceive} = time();
   #$hash->{lastValues}{temperature} = $tmp;
   #$hash->{lastValues}{humidity} = $hum;
 
+  my $i;
+  my $val = "";
+  
+  readingsBeginUpdate($hash);
 
+  foreach $i (@res){
+	if ($i->{type} eq "temp") { 
+			$val .= "T: ".$i->{current}." ";
+			readingsBulkUpdate($hash, "state", $val);
+			readingsBulkUpdate($hash, "temperature", $i->{current});
+  	} 
+	elsif ($i->{type} eq "battery") { 
+			my @words = split(/\s+/,$i->{current});
+			$val .= "BAT: ".$words[0]." "; #use only first word
+			readingsBulkUpdate($hash, "battery", $val);
+  	} 
+
+	}
 #  Log3 $name, 4, "FHEMduino_Oregon $name: $val";
-
-   readingsBeginUpdate($hash);
+   
+#  readingsBeginUpdate($hash);
 #  readingsBulkUpdate($hash, "state", $val);
-#  readingsBulkUpdate($hash, "temperature", $tmp);
+#  readingsBulkUpdate($hash, "temperature", $res[0]=>'current');
 #  readingsBulkUpdate($hash, "humidity", $hum);
 #  readingsBulkUpdate($hash, "battery", $bat);
 #  readingsBulkUpdate($hash, "trend", $trend);
@@ -359,9 +376,21 @@ sub FHEMduino_Oregon_Attr(@)
   <a name="FHEMduino_Oregondefine"></a>
   <b>Define</b>
   <ul>
-    <code>define &lt;name&gt; FHEMduino_Oregon &lt;code&gt; [corr1...corr4]</code> <br>
+    <code>define &lt;name&gt; FHEMduino_NC_WS &lt;code&gt; [minsecs] [equalmsg]</code> <br>
     <br>
-  </ul>
+ 
+    &lt;code&gt; ist der sensor ID Code des Snesors und besteht aus der
+	Sensor ID + Kanalnumme (1..5) <br>
+    minsecs definert die Sekunden die mindesten vergangen sein müssen bis ein neuer
+	Logeintrag oder eine neue Nachricht generiert werden.
+    <br>
+	Z.B. wenn 300, werden Einträge nur alle 5 Minuten erzeugt, auch wenn das Device
+    alle paar Sekunden eine Nachricht generiert. (Reduziert die Log-Dateigröße und die Zeit
+	die zur Anzeige von Plots benötigt wird.)<br>
+	equalmsg gesetzt auf 1 legt fest, dass Einträge auch dann erzeugt werden wenn die durch
+	minsecs vorgegebene Zeit noch nicht verstrichen ist, sich aber der Nachrichteninhalt geändert
+	hat.
+	</ul>
   <br>
 
   <a name="FHEMduino_Oregonset"></a>
@@ -377,7 +406,7 @@ sub FHEMduino_Oregon_Attr(@)
     <li><a href="#do_not_notify">do_not_notify</a></li>
     <li><a href="#eventMap">eventMap</a></li>
     <li><a href="#ignore">ignore</a></li>
-    <li><a href="#model">model</a> (S300,KS300,ASH2200)</li>
+    <li><a href="#model">model</a> </li>
     <li><a href="#showtime">showtime</a></li>
     <li><a href="#readingFnAttributes">readingFnAttributes</a></li>
   </ul>
