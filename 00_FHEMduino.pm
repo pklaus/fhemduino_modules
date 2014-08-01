@@ -32,7 +32,7 @@ my %sets = (
   "time"      => ""
 );
 
-my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_KW9010:FHEMduino_PT2262:FHEMduino_NC_WS:FHEMduino_EuroChr:FHEMduino_DCF77:FHEMduino_FA20RF:FHEMduino_GAS:";
+my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_KW9010:FHEMduino_PT2262:FHEMduino_NC_WS:FHEMduino_EuroChr:FHEMduino_DCF77:FHEMduino_FA20RF:FHEMduino_GAS:FHEMduino_Oregon:OREGON:";
 
 my %matchListSlowRF = (
     "1:IT"                 => "^i......\$",
@@ -43,8 +43,12 @@ my %matchListSlowRF = (
     "6:FHEMduino_EuroChr"  => "C.............\$",
     "7:FHEMduino_DCF77"    => "D...............\$",
     "8:FHEMduino_FA20RF"   => "F............\$",
-    "9:CUL_TX"             => "^TX..........",        # Need TX to avoid FHTTK
+    "9:FHEMduino_Gas"      => "G...........\$",
     "10:FHEMduino_Oregon"  => "OSV2:.*\$",
+	"11:OREGON"            => "^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*",
+	"12:CUL_TX"             => "^TX..........",        # Need TX to avoid FHTTK
+    
+
 );
 
 sub
@@ -461,6 +465,7 @@ FHEMduino_Parse($$$$)
   my ($hash, $iohash, $name, $rmsg) = @_;
 
   my $rssi;
+  my %addvals;
 
   my $dmsg = $rmsg;
   if($dmsg =~ m/^[AFTKEHRStZri]([A-F0-9][A-F0-9])+$/) { # RSSI
@@ -477,6 +482,14 @@ FHEMduino_Parse($$$$)
   #Translate Message from FHEMduino to FHZ
   next if(!$dmsg || length($dmsg) < 1);            # Bogus messages
 
+  if ($dmsg =~ m/^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*/) {
+   ### implement error checking here!
+	Log3 $name, 4, "Dispatching OREGON Protokoll. Received: $dmsg";
+	Dispatch($hash, $dmsg, undef);
+	return;		
+  }
+
+  
   if($dmsg =~ m/^[0-9A-F]{4}U./) {                 # RF_ROUTER
 	Dispatch($hash, $dmsg, undef);
     return;
@@ -527,6 +540,8 @@ FHEMduino_Parse($$$$)
   }
     elsif($fn eq "O" && $len >= 2) {        # Oregon
   ### implement error checking here!
+  	Log3 $name, 4, "OSV protokoll received, using fhemduino_oregon : $dmsg";
+
   ;
   }
   else {
@@ -538,7 +553,7 @@ FHEMduino_Parse($$$$)
   $hash->{"${name}_MSGCNT"}++;
   $hash->{"${name}_TIME"} = TimeNow();
   $hash->{RAWMSG} = $rmsg;
-  my %addvals = (RAWMSG => $rmsg);
+  %addvals = (RAWMSG => $rmsg);
   if(defined($rssi)) {
     $hash->{RSSI} = $rssi;
     $addvals{RSSI} = $rssi;
@@ -637,6 +652,7 @@ FHEMduino_Attr(@)
   EUROCHRON / Tchibo  --> 14_FHEMduino_EuroChr.pm<br>
   LIFETEC  --> 14_FHEMduino_KW9010.pm<br>
   TX70DTH  --> 14_FHEMduino_KW9010.pm<br>
+  Oregon Scientific  --> 41_Oregon.pm or 14_FHEMduino_oregon.pm<br>
   Intertechno TX2/3/4  --> CUL_TX.pm<br>
   <br><br>
 
