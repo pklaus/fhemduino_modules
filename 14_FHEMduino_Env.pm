@@ -344,7 +344,7 @@ FHEMduino_Env_Parse($$)
     # AF = absolute Feuchte in g Wasserdampf pro m3 Luft
     ($af, $td) = af_td($temp, $hum);
     $hash->{lastValues}{taupunkttemp} = $td;
-    $hash->{lastValues}{abshumidity} = $af;
+    $hash->{lastValues}{abshum} = $af;
   }
   $def->{lastMSG} = $msg;
   $def->{bitMSG} = $bitsequence;
@@ -357,7 +357,7 @@ FHEMduino_Env_Parse($$)
   if ($hum >= 0) {
     readingsBulkUpdate($hash, "humidity", $hum);
     readingsBulkUpdate($hash, "taupunkttemp", $td);
-    readingsBulkUpdate($hash, "abshumidity", $af);
+    readingsBulkUpdate($hash, "abshum", $af);
   }
   if ($bat ne "") {
     readingsBulkUpdate($hash, "battery", $bat);
