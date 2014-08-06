@@ -308,24 +308,27 @@ FHEMduino_Get($@)
 
   return "No $a[1] for dummies" if(IsDummy($name));
 
+  Log3 $name, 5, "$name: command for gets: " . $gets{$a[1]}[0] . " " . $arg;
   
-    FHEMduino_SimpleWrite($hash, $gets{$a[1]}[0] . $arg);
-    ($err, $msg) = FHEMduino_ReadAnswer($hash, $a[1], 0, $gets{$a[1]}[1]);
-    if(!defined($msg)) {
-      DevIo_Disconnected($hash);
-      $msg = "No answer";
+  FHEMduino_SimpleWrite($hash, $gets{$a[1]}[0] . $arg);
 
-    } elsif($a[1] eq "cmds") {       # nice it up
-      $msg =~ s/.*Use one of//g;
+  ($err, $msg) = FHEMduino_ReadAnswer($hash, $a[1], 0, $gets{$a[1]}[1]);
+  Log3 $name, 5, "$name: received message for gets: " . $msg;
 
-    } elsif($a[1] eq "uptime") {     # decode it
-      $msg =~ s/[\r\n]//g;
-      $msg = hex($msg)/125;
-      $msg = sprintf("%d %02d:%02d:%02d",
-        $msg/86400, ($msg%86400)/3600, ($msg%3600)/60, $msg%60);
-    }
+  if(!defined($msg)) {
+    DevIo_Disconnected($hash);
+    $msg = "No answer";
 
+  } elsif($a[1] eq "cmds") {       # nice it up
+    $msg =~ s/.*Use one of//g;
+
+  } elsif($a[1] eq "uptime") {     # decode it
     $msg =~ s/[\r\n]//g;
+    $msg = hex($msg);              # /125; only for col or coc
+    $msg = sprintf("%d %02d:%02d:%02d", $msg/86400, ($msg%86400)/3600, ($msg%3600)/60, $msg%60);
+  }
+
+  $msg =~ s/[\r\n]//g;
 
   $hash->{READINGS}{$a[1]}{VAL} = $msg;
   $hash->{READINGS}{$a[1]}{TIME} = TimeNow();
@@ -589,16 +592,16 @@ FHEMduino_Parse($$$$)
   #Translate Message from FHEMduino to FHZ
   next if(!$dmsg || length($dmsg) < 1);            # Bogus messages
 
+  if($dmsg =~ m/^[0-9A-F]{4}U./) {                 # RF_ROUTER
+    Dispatch($hash, $dmsg, undef);
+    return;
+  }
+
   if ($dmsg =~ m/^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*/) {
   ### implement error checking here!
     Log3 $name, 4, "Dispatching OREGON Protokoll. Received: $dmsg";
     Dispatch($hash, $dmsg, undef);
     return;		
-  }
-
-  if($dmsg =~ m/^[0-9A-F]{4}U./) {                 # RF_ROUTER
-    Dispatch($hash, $dmsg, undef);
-    return;
   }
 
   my $fn = substr($dmsg,0,1);
@@ -762,6 +765,7 @@ FHEMduino_Attr(@)
   EUROCHRON / Tchibo  --> 14_FHEMduino_Env.pm<br>
   LIFETEC  --> 14_FHEMduino_Env.pm<br>
   TX70DTH  --> 14_FHEMduino_Env.pm<br>
+  AURIOL   --> 14_FHEMduino_Env.pm<br>
   Intertechno TX2/3/4  --> CUL_TX.pm<br>
   <br><br>
 
