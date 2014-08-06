@@ -222,7 +222,7 @@ sub FHEMduino_PT2262_Set($@){ ##################################################
   $message = "is".uc($hash->{XMIT}.$hash->{$c});
 
   ## Log that we are going to switch InterTechno
-  Log GetLogLevel($a[0],2), "FHEMduino_PT2262 set $v";
+  Log GetLogLevel($a[0],2), "FHEMduino_PT2262 set $v IO_name:$io->{NAME}";
   (undef, $v) = split(" ", $v, 2);	# Not interested in the name...
 
   ## Send Message to IODev and wait for correct answer
@@ -245,11 +245,11 @@ sub FHEMduino_PT2262_Set($@){ ##################################################
     }
   }
 
-
   # Look for all devices with the same code, and set state, timestamp
   my $code = "$hash->{XMIT}";
-  my $name = "$hash->{NAME}";
   my $tn = TimeNow();
+
+  $name = "$hash->{NAME}";
 
   foreach my $n (keys %{ $modules{FHEMduino_PT2262}{defptr}{$code} }) {
     my $lh = $modules{FHEMduino_PT2262}{defptr}{$code}{$n};
