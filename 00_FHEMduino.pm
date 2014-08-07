@@ -38,13 +38,13 @@ my %sets = (
   "flash"     => ""
 );
 
-my $clientsFHEMduino = ":IT:CUL_TX:OREGON:FHEMduino_Env:FHEMduino_EZ6:FHEMduino_Oregon:FHEMduino_PT2262:FHEMduino_FA20RF:FHEMduino_TCM:FHEMduino_HX:FHEMduino_DCF77:";
+my $clientsFHEMduino = ":IT:CUL_TX:OREGON:FHEMduino_Env:FHEMduino_EZ6:FHEMduino_Oregon:FHEMduino_PT2262:FHEMduino_FA20RF:FHEMduino_TCM:FHEMduino_HX:FHEMduino_DCF77:FHEMduino_Gas:";
 
 my %matchListFHEMduino = (
     "1:IT"                 => "^i......\$",
     "2:CUL_TX"             => "^TX..........",        # Need TX to avoid FHTTK
     "3:FHEMduino_Env"      => "W.*\$",
-    "4:FHEMduino_EZ6"      => "E...........\$",
+    "4:FHEMduino_EZ6"      => "E...........\$",       # Special Sketch needed. See FHEMWIKI
     "5:FHEMduino_Oregon"   => "OSV2:.*\$",
     "6:FHEMduino_PT2262"   => "IR.*\$",
     "7:FHEMduino_FA20RF"   => "F............\$",
@@ -52,6 +52,7 @@ my %matchListFHEMduino = (
     "9:FHEMduino_HX"       => "H...\$",
     "10:FHEMduino_DCF77"   => "D...............\$",
     "11:OREGON"            => "^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*",
+    "12:FHEMduino_Gas"     => "G...........\$",      # Special Sketch needed. See GitHub GAS_I2C or FHEMWIKI
 );
 
 sub
