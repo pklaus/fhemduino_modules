@@ -25,25 +25,35 @@ my %gets = (    # Name, Data to send to the FHEMduino, Regexp for the answer
   "cmds"     => ["?", '.*Use one of[ 0-9A-Za-z]+[\r\n]*$' ],
 );
 
+#my %sets = (
+#  "raw"       => "",
+#  "led"       => "",
+#  "patable"   => "",
+#  "time"      => "",
+#  "flash"     => ""
+#);
+
 my %sets = (
   "raw"       => "",
-  "led"       => "",
-  "patable"   => "",
-  "time"      => ""
+  "flash"     => "",
+  "reset"     => ""
 );
 
-my $clientsSlowRF = ":IT:FHEMduino_EZ6:FHEMduino_PT2262:FHEMduino_NC_WS:FHEMduino_EuroChr:FHEMduino_DCF77:FHEMduino_FA20RF:FHEMduino_GAS:";
+my $clientsFHEMduino = ":IT:CUL_TX:OREGON:FHEMduino_Env:FHEMduino_EZ6:FHEMduino_Oregon:FHEMduino_PT2262:FHEMduino_FA20RF:FHEMduino_TCM:FHEMduino_HX:FHEMduino_DCF77:FHEMduino_Gas:";
 
-my %matchListSlowRF = (
+my %matchListFHEMduino = (
     "1:IT"                 => "^i......\$",
-    "2:FHEMduino_EZ6"      => "E...........\$",
-    "3:FHEMduino_KW9010"   => "K...........\$",
-    "4:FHEMduino_PT2262"   => "IR.*\$",
-    "5:FHEMduino_NC_WS"    => "L............\$",
-    "6:FHEMduino_EuroChr"  => "T.............\$",
-    "7:FHEMduino_DCF77"    => "D...............\$",
-    "8:FHEMduino_FA20RF"   => "F............\$",
-    "9:FHEMduino_Gas"      => "G...........\$",
+    "2:CUL_TX"             => "^TX..........",        # Need TX to avoid FHTTK
+    "3:FHEMduino_Env"      => "W.*\$",
+    "4:FHEMduino_EZ6"      => "E...........\$",       # Special Sketch needed. See FHEMWIKI
+    "5:FHEMduino_Oregon"   => "OSV2:.*\$",
+    "6:FHEMduino_PT2262"   => "IR.*\$",
+    "7:FHEMduino_FA20RF"   => "F............\$",
+    "8:FHEMduino_TCM"      => "M.....\$",
+    "9:FHEMduino_HX"       => "H...\$",
+    "10:FHEMduino_DCF77"   => "D...............\$",
+    "11:OREGON"            => "^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*",
+    "12:FHEMduino_Gas"     => "G...........\$",      # Special Sketch needed. See GitHub GAS_I2C or FHEMWIKI
 );
 
 sub
@@ -65,7 +75,11 @@ FHEMduino_Initialize($)
   $hash->{GetFn}   = "FHEMduino_Get";
   $hash->{SetFn}   = "FHEMduino_Set";
   $hash->{AttrFn}  = "FHEMduino_Attr";
-  $hash->{AttrList}= "do_not_notify:1,0 dummy:1,0 showtime:1,0 sendpool addvaltrigger";
+  $hash->{AttrList}= "Clients MatchList "
+                      ." hexFile"
+                      ." initCommands"
+                      ." flashCommand"
+                      ." $readingFnAttributes";
 
   $hash->{ShutdownFn} = "FHEMduino_Shutdown";
 
@@ -98,11 +112,18 @@ FHEMduino_Define($$)
   DevIo_CloseDev($hash);
 
   my $name = $a[0];
+
   my $dev = $a[2];
+  $dev .= "\@9600" if( $dev !~ m/\@/ );
   
-  $hash->{CMDS} = "";
-  $hash->{Clients} = $clientsSlowRF;
-  $hash->{MatchList} = \%matchListSlowRF;
+#  $hash->{CMDS} = "";
+  $hash->{Clients} = $clientsFHEMduino;
+  $hash->{MatchList} = \%matchListFHEMduino;
+
+  if( !defined( $attr{$name}{flashCommand} ) ) {
+#    $attr{$name}{flashCommand} = "avrdude -p atmega328P -c arduino -P [PORT] -D -U flash:w:[HEXFILE] 2>[LOGFILE]"
+    $attr{$name}{flashCommand} = "avrdude -c arduino -b 57600 -P [PORT] -p atmega328p -vv -U flash:w:[HEXFILE] 2>[LOGFILE]"
+  }
 
   if($dev eq "none") {
     Log3 $name, 1, "$name device is none, commands will be echoed only";
@@ -133,7 +154,7 @@ FHEMduino_Undef($$)
       }
   }
 
-  FHEMduino_SimpleWrite($hash, "X00"); # Switch reception off, it may hang up the FHEMduino
+  FHEMduino_Shutdown($hash);
   DevIo_CloseDev($hash); 
   return undef;
 }
@@ -143,7 +164,7 @@ sub
 FHEMduino_Shutdown($)
 {
   my ($hash) = @_;
-  FHEMduino_SimpleWrite($hash, "X00");
+  FHEMduino_SimpleWrite($hash, "X00");  # Switch reception off, it may hang up the FHEMduino
   return undef;
 }
 
@@ -158,20 +179,98 @@ FHEMduino_Set($@)
   	if(!defined($sets{$a[1]}));
 
   my $name = shift @a;
-  my $type = shift @a;
-  my $arg = join("", @a);
+  my $cmd = shift @a;
+  my $arg = join(" ", @a);
 
-  return "This command is not valid in the current rfmode"
-      if($sets{$type} && $sets{$type} ne AttrVal($name, "rfmode", "SlowRF"));
+  my $list = "raw led:on,off led-on-for-timer reset flash";
+  return $list if( $cmd eq '?' || $cmd eq '');
 
-   ###############################################  raw,led,patable
-
-    return "Expecting a 0-padded hex number"
-        if((length($arg)&1) == 1 && $type ne "raw");
-    Log3 $name, 3, "set $name $type $arg";
-    $arg = "l$arg" if($type eq "led");
-    $arg = "x$arg" if($type eq "patable");
+  if($cmd eq "raw") {
+    Log3 $name, 4, "set $name $cmd $arg";
     FHEMduino_SimpleWrite($hash, $arg);
+  } elsif( $cmd eq "flash" ) {
+    my @args = split(' ', $arg);
+    my $log = "";
+    my $hexFile = "";
+    my @deviceName = split('@', $hash->{DeviceName});
+    my $port = $deviceName[0];
+    my $defaultHexFile = "./hexfiles/$hash->{TYPE}.hex";
+    my $logFile = AttrVal("global", "logdir", "./log/") . "$hash->{TYPE}-Flash.log";
+
+    if(!$arg || $args[0] !~ m/^(\w|\/|.)+$/) {
+      $hexFile = AttrVal($name, "hexFile", "");
+      if ($hexFile eq "") {
+        $hexFile = $defaultHexFile;
+      }
+    }
+    else {
+      $hexFile = $args[0];
+    }
+
+    return "Usage: set $name flash [filename]\n\nor use the hexFile attribute" if($hexFile !~ m/^(\w|\/|.)+$/);
+
+    $log .= "flashing Arduino $name\n";
+    $log .= "hex file: $hexFile\n";
+    $log .= "port: $port\n";
+    $log .= "log file: $logFile\n";
+
+    my $flashCommand = AttrVal($name, "flashCommand", "");
+
+    if($flashCommand ne "") {
+      if (-e $logFile) {
+        unlink $logFile;
+      }
+
+      DevIo_CloseDev($hash);
+      $hash->{STATE} = "disconnected";
+      $log .= "$name closed\n";
+
+      my $avrdude = $flashCommand;
+      $avrdude =~ s/\Q[PORT]\E/$port/g;
+      $avrdude =~ s/\Q[HEXFILE]\E/$hexFile/g;
+      $avrdude =~ s/\Q[LOGFILE]\E/$logFile/g;
+
+      $log .= "command: $avrdude\n\n";
+      `$avrdude`;
+
+      local $/=undef;
+      if (-e $logFile) {
+        open FILE, $logFile;
+        my $logText = <FILE>;
+        close FILE;
+        $log .= "--- AVRDUDE ---------------------------------------------------------------------------------\n";
+        $log .= $logText;
+        $log .= "--- AVRDUDE ---------------------------------------------------------------------------------\n\n";
+      }
+      else {
+        $log .= "WARNING: avrdude created no log file\n\n";
+      }
+
+    }
+    else {
+      $log .= "\n\nNo flashCommand found. Please define this attribute.\n\n";
+    }
+
+    DevIo_OpenDev($hash, 0, "FHEMduino_DoInit");
+    $log .= "$name opened\n";
+
+    return $log;
+
+  } elsif ($cmd =~ m/reset/i) {
+    return FHEMduino_ResetDevice($hash);
+  } elsif( $cmd eq "led" ) {
+    return "Expecting a 0-padded hex number" if((length($arg)&1) == 1);
+    Log3 $name, 3, "set $name $cmd $arg";
+    $arg = "l$arg";
+    FHEMduino_SimpleWrite($hash, $arg);
+  } elsif( $cmd eq "patable" ) {
+    return "Expecting a 0-padded hex number" if((length($arg)&1) == 1);
+    Log3 $name, 3, "set $name $cmd $arg";
+    $arg = "x$arg";
+    FHEMduino_SimpleWrite($hash, $arg);
+  } else {
+    return "Unknown argument $cmd, choose one of ".$list;
+  }
 
   return undef;
 }
@@ -195,24 +294,27 @@ FHEMduino_Get($@)
 
   return "No $a[1] for dummies" if(IsDummy($name));
 
+  Log3 $name, 5, "$name: command for gets: " . $gets{$a[1]}[0] . " " . $arg;
   
-    FHEMduino_SimpleWrite($hash, $gets{$a[1]}[0] . $arg);
-    ($err, $msg) = FHEMduino_ReadAnswer($hash, $a[1], 0, $gets{$a[1]}[1]);
-    if(!defined($msg)) {
-      DevIo_Disconnected($hash);
-      $msg = "No answer";
+  FHEMduino_SimpleWrite($hash, $gets{$a[1]}[0] . $arg);
 
-    } elsif($a[1] eq "cmds") {       # nice it up
-      $msg =~ s/.*Use one of//g;
+  ($err, $msg) = FHEMduino_ReadAnswer($hash, $a[1], 0, $gets{$a[1]}[1]);
+  Log3 $name, 5, "$name: received message for gets: " . $msg;
 
-    } elsif($a[1] eq "uptime") {     # decode it
-      $msg =~ s/[\r\n]//g;
-      $msg = hex($msg)/125;
-      $msg = sprintf("%d %02d:%02d:%02d",
-        $msg/86400, ($msg%86400)/3600, ($msg%3600)/60, $msg%60);
-    }
+  if(!defined($msg)) {
+    DevIo_Disconnected($hash);
+    $msg = "No answer";
 
+  } elsif($a[1] eq "cmds") {       # nice it up
+    $msg =~ s/.*Use one of//g;
+
+  } elsif($a[1] eq "uptime") {     # decode it
     $msg =~ s/[\r\n]//g;
+    $msg = hex($msg);              # /125; only for col or coc
+    $msg = sprintf("%d %02d:%02d:%02d", $msg/86400, ($msg%86400)/3600, ($msg%3600)/60, $msg%60);
+  }
+
+  $msg =~ s/[\r\n]//g;
 
   $hash->{READINGS}{$a[1]}{VAL} = $msg;
   $hash->{READINGS}{$a[1]}{TIME} = TimeNow();
@@ -232,6 +334,18 @@ FHEMduino_Clear($)
     last if($err && $err =~ m/^Timeout/);
   }
   delete($hash->{RA_Timeout});
+}
+
+#####################################
+sub
+FHEMduino_ResetDevice($)
+{
+  my ($hash) = @_;
+
+  DevIo_CloseDev($hash);
+  my $ret = DevIo_OpenDev($hash, 0, "FHEMduino_DoInit");
+
+  return $ret;
 }
 
 #####################################
@@ -268,7 +382,12 @@ FHEMduino_DoInit($)
   $cmds =~ s/ //g;
   $hash->{CMDS} = $cmds;
   Log3 $name, 3, "$name: Possible commands: " . $hash->{CMDS};
-
+#  if( my $initCommandsString = AttrVal($name, "initCommands", undef) ) {
+#    my @initCommands = split(' ', $initCommandsString);
+#    foreach my $command (@initCommands) {
+#      FHEMduino_SimpleWrite($hash, $command);
+#    }
+#  }
   $hash->{STATE} = "Initialized";
 
   # Reset the counter
@@ -477,58 +596,65 @@ FHEMduino_Parse($$$$)
   next if(!$dmsg || length($dmsg) < 1);            # Bogus messages
 
   if($dmsg =~ m/^[0-9A-F]{4}U./) {                 # RF_ROUTER
-	Dispatch($hash, $dmsg, undef);
+    Dispatch($hash, $dmsg, undef);
     return;
+  }
+
+  if ($dmsg =~ m/^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*/) {
+  ### implement error checking here!
+    Log3 $name, 4, "Dispatching OREGON Protokoll. Received: $dmsg";
+    Dispatch($hash, $dmsg, undef);
+    return;		
   }
 
   my $fn = substr($dmsg,0,1);
   my $len = int(length($dmsg));
 
-  if($fn eq "i" && $len >= 7) {              # IT
+  if($fn eq "i" && $len >= 7) {           # IT
     $dmsg = lc($dmsg);
-  } elsif($fn eq "E" && $len >= 2) {
-	### implement error checking here!
-	;
-  }
-  elsif($fn eq "K" && $len >= 2) {
+  } 
+  elsif($fn eq "E" && $len >= 2) {        # EZ6 Meteo
   ### implement error checking here!
   ;
   }
-  elsif($fn eq "L" && $len >= 2) {          # LogiLink
-    Log3 $name, 4, "LogiL: $dmsg";
+  elsif($fn eq "W" && $len == 12) {       # Weather sensors; allways filled up to 12 letters
+    $dmsg = uc($dmsg);
   ### implement error checking here!
   ;
   }
-  elsif($fn eq "T" && $len >= 2) {          # EuroChron / Tchibo
-    Log3 $name, 4, "EuTch: $dmsg";
+  elsif($fn eq "T" && $len >= 2) {        # Technoline TX2/3/4
+    Log3 $name, 4, "CUL_TX: $dmsg";
   ### implement error checking here!
   ;
   }
-  elsif($fn eq "I" && $len >= 2) {			# PT2262
-	Dispatch($hash, $dmsg, undef);
+  elsif($fn eq "I" && $len >= 2) {		# PT2262
+    Dispatch($hash, $dmsg, undef);
   ### implement error checking here!
   ;
   }
-  elsif($fn eq "D" && $len >= 2) {			# DCF77
+  elsif($fn eq "D" && $len >= 2) {		# DCF77
     Log3 $name, 4, "DCF77: $dmsg";
   ### implement error checking here!
   ;
   }
-  elsif($fn eq "F" && $len >= 2) {			# FA20RF
+  elsif($fn eq "F" && $len >= 2) {		# FA20RF
     Log3 $name, 4, "FA20RF: $dmsg";
   ### implement error checking here!
   ;
   }
-    elsif($fn eq "G" && $len >= 2) {        # Gas
+  elsif($fn eq "M" && $len >= 6) {        # Door bells TCM (Tchibo)
+    Log3 $name, 4, "TCM: $dmsg";
   ### implement error checking here!
   ;
   }
-  elsif($fn eq "I" && $len >= 8) {			# ELRO
-	Dispatch($hash, $dmsg, undef);
+  elsif($fn eq "H" && $len >= 4) {        # Door bells Heidemann HX
+    Log3 $name, 4, "HX: $dmsg";
   ### implement error checking here!
   ;
   }
-
+  elsif($fn eq "O" && $len >= 2) {        # Oregon
+    Log3 $name, 4, "OSVduino: $dmsg";
+  }
   else {
     DoTrigger($name, "UNKNOWNCODE $dmsg message length ($len)");
     Log3 $name, 2, "$name: unknown message $dmsg message length ($len)";
@@ -608,22 +734,43 @@ FHEMduino_Attr(@)
 
   <table>
   <tr><td>
-  The FHEMduino/CUR/CUN is a family of RF devices sold by <a
-  href="http://www.busware.de">busware.de</a>.
+  The FHEMduino ia based on an idea from mdorenka published at <a
+  href="http://forum.fhem.de/index.php/topic,17196.0.html">FHEM Forum</a>.
 
   With the opensource firmware (see this <a
-  href="http://FHEMduinofw.de/FHEMduinofw.html">link</a>) they are capable
-  to receive and send different 868MHz protocols (FS20/FHT/S300/EM/HMS).
-  It is even possible to use these devices as range extenders/routers, see the
-  <a href="#FHEMduino_RFR">FHEMduino_RFR</a> module for details.
-  <br> <br>
+  href="https://github.com/mdorenka">link</a>) they are capable
+  to receive and send different 433MHz protocols.
+  <br><br>
+  
+  The following protocols are available:
+  <br><br>
+  
+  Date / Time protocol  <br>
+  DCF-77 --> 14_FHEMduino_DCF77.pm <br>
+  <br><br>
+  
+  Wireless switches  <br>
+  PT2262 (IT / ELRO switches) --> 14_FHEMduino_PT2262.pm <br>
+  <br><br>
+  
+  Smoke detector   <br>
+  Flamingo FA20RF / ELRO RM150RF  --> 14_FHEMduino_FA20RF.pm<br>
+  <br><br>
+  
+  Door bells   <br>
+  Heidemann HX Series --> 14_FHEMduino_HX.pm<br>
+  Tchibo TCM --> 14_FHEMduino_TCM.pm<br>
+  <br><br>
 
-  Some protocols (FS20, FHT and KS300) are converted by this module so that
-  the same logical device can be used, irrespective if the radio telegram is
-  received by a FHEMduino or an FHZ device.<br> Other protocols (S300/EM) need their
-  own modules. E.g. S300 devices are processed by the FHEMduino_WS module if the
-  signals are received by the FHEMduino, similarly EMWZ/EMGZ/EMEM is handled by the
-  FHEMduino_EM module.<br><br>
+  Temperatur / humidity sensors  <br>
+  KW9010  --> 14_FHEMduino_Env.pm<br>
+  PEARL NC7159, LogiLink WS0002  --> 14_FHEMduino_Env.pm<br>
+  EUROCHRON / Tchibo  --> 14_FHEMduino_Env.pm<br>
+  LIFETEC  --> 14_FHEMduino_Env.pm<br>
+  TX70DTH  --> 14_FHEMduino_Env.pm<br>
+  AURIOL   --> 14_FHEMduino_Env.pm<br>
+  Intertechno TX2/3/4  --> CUL_TX.pm<br>
+  <br><br>
 
   It is possible to attach more than one device in order to get better
   reception, fhem will filter out duplicate messages.<br><br>
@@ -631,7 +778,6 @@ FHEMduino_Attr(@)
   Note: this module may require the Device::SerialPort or Win32::SerialPort
   module if you attach the device via USB and the OS sets strange default
   parameters for serial devices.
-
 
   </td><td>
   <img src="ccc.jpg"/>
@@ -644,8 +790,8 @@ FHEMduino_Attr(@)
     <code>define &lt;name&gt; FHEMduino &lt;device&gt; &lt;FHTID&gt;</code> <br>
     <br>
     USB-connected devices (FHEMduino/CUR/CUN):<br><ul>
-      &lt;device&gt; specifies the serial port to communicate with the FHEMduino or
-      CUR.  The name of the serial-device depends on your distribution, under
+      &lt;device&gt; specifies the serial port to communicate with the FHEMduino.
+	  The name of the serial-device depends on your distribution, under
       linux the cdc_acm kernel module is responsible, and usually a
       /dev/ttyACM0 device will be created. If your distribution does not have a
       cdc_acm module, you can force usbserial to handle the FHEMduino by the
@@ -662,18 +808,6 @@ FHEMduino_Attr(@)
       defaults for the serial parameters, e.g. some Linux distributions and
       OSX.  <br><br>
 
-    </ul>
-    Network-connected devices (CUN):<br><ul>
-    &lt;device&gt; specifies the host:port of the device. E.g.
-    192.168.0.244:2323
-    </ul>
-    <br>
-    If the device is called none, then no device will be opened, so you
-    can experiment without hardware attached.<br>
-
-    The FHTID is a 4 digit hex number, and it is used when the FHEMduino/CUR talks to
-    FHT devices or when CUR requests data. Set it to 0000 to avoid answering
-    any FHT80b request by the FHEMduino.
   </ul>
   <br>
 
@@ -684,77 +818,57 @@ FHEMduino_Attr(@)
         Issue a FHEMduino firmware command.  See the <a
         href="http://FHEMduinofw.de/commandref.html">this</a> document
         for details on FHEMduino commands.
-        </li><br>
+    </li><br>
 
-    <li>freq / bWidth / rAmpl / sens<br>
-        <a href="#rfmode">SlowRF</a> mode only.<br>
-        Set the FHEMduino frequency / bandwidth / receiver-amplitude / sensitivity<br>
+    <li>flash [hexFile]<br>
+    The JeeLink needs the right firmware to be able to receive and deliver the sensor data to fhem. In addition to the way using the
+    arduino IDE to flash the firmware into the JeeLink this provides a way to flash it directly from FHEM.
 
-        Use it with care, it may destroy your hardware and it even may be
-        illegal to do so. Note: the parameters used for RFR transmission are
-        not affected.<br>
+    There are some requirements:
+    <ul>
+      <li>avrdude must be installed on the host<br>
+      On a Raspberry PI this can be done with: sudo apt-get install avrdude</li>
+      <li>the flashCommand attribute must be set.<br>
+        This attribute defines the command, that gets sent to avrdude to flash the JeeLink.<br>
+        The default is: avrdude -p atmega328P -c arduino -P [PORT] -D -U flash:w:[HEXFILE] 2>[LOGFILE]<br>
+        It contains some place-holders that automatically get filled with the according values:<br>
         <ul>
-        <li>freq sets both the reception and transmission frequency. Note:
-            although the CC1101 can be set to frequencies between 315 and 915
-            MHz, the antenna interface and the antenna of the FHEMduino is tuned for
-            exactly one frequency. Default is 868.3MHz (or 433MHz)</li>
-        <li>bWidth can be set to values between 58kHz and 812kHz. Large values
-            are susceptible to interference, but make possible to receive
-            inaccurate or multiple transmitters. It affects tranmission too.
-            Default is 325kHz.</li>
-        <li>rAmpl is receiver amplification, with values between 24 and 42 dB.
-            Bigger values allow reception of weak signals. Default is 42.
-            </li>
-        <li>sens is the decision boundery between the on and off values, and it
-            is 4, 8, 12 or 16 dB.  Smaller values allow reception of less clear
-            signals. Default is 4dB.</li>
+          <li>[PORT]<br>
+            is the port the JeeLink is connectd to (e.g. /dev/ttyUSB0)</li>
+          <li>[HEXFILE]<br>
+            is the .hex file that shall get flashed. There are three options (applied in this order):<br>
+            - passed in set flash<br>
+            - taken from the hexFile attribute<br>
+            - the default value defined in the module<br>
+          </li>
+          <li>[LOGFILE]<br>
+            The logfile that collects information about the flash process. It gets displayed in FHEM after finishing the flash process</li>
         </ul>
-        </li><br>
-    <li>led<br>
-        Set the FHEMduino led off (00), on (01) or blinking (02).
-        </li><br>
-  </ul>
+      </li>
+    </ul>
+    </li><br>
 
+    <li>led &lt;on|off&gt;<br>
+    Is used to disable the blue activity LED
+    </li><br>
+
+  </ul>
   <a name="FHEMduinoget"></a>
   <b>Get</b>
   <ul>
     <li>version<br>
         return the FHEMduino firmware version
         </li><br>
-    <li>uptime<br>
-        return the FHEMduino uptime (time since FHEMduino reset).
-        </li><br>
     <li>raw<br>
         Issue a FHEMduino firmware command, and wait for one line of data returned by
         the FHEMduino. See the FHEMduino firmware README document for details on FHEMduino
         commands.
         </li><br>
-    <li>fhtbuf<br>
-        FHEMduino has a message buffer for the FHT. If the buffer is full, then newly
-        issued commands will be dropped, and an "EOB" message is issued to the
-        fhem log.
-        <code>fhtbuf</code> returns the free memory in this buffer (in hex),
-        an empty buffer in the FHEMduino-V2 is 74 bytes, in FHEMduino-V3/CUN 200 Bytes.
-        A message occupies 3 + 2x(number of FHT commands) bytes,
-        this is the second reason why sending multiple FHT commands with one
-        <a href="#set">set</a> is a good idea. The first reason is, that
-        these FHT commands are sent at once to the FHT.
-        </li> <br>
-
-    <li>ccconf<br>
-        Read some FHEMduino radio-chip (cc1101) registers (frequency, bandwidth, etc),
-        and display them in human readable form.
-        </li><br>
-
     <li>cmds<br>
         Depending on the firmware installed, FHEMduinos have a different set of
         possible commands. Please refer to the README of the firmware of your
         FHEMduino to interpret the response of this command. See also the raw-
         command.
-        </li><br>
-    <li>credit10ms<br>
-        One may send for a duration of credit10ms*10 ms before the send limit is reached and a LOVF is
-        generated.
         </li><br>
   </ul>
 
@@ -765,38 +879,6 @@ FHEMduino_Attr(@)
     <li><a href="#attrdummy">dummy</a></li>
     <li><a href="#showtime">showtime</a></li>
     <li><a href="#model">model</a> (FHEMduino,CUN,CUR)</li>
-    <li><a name="sendpool">sendpool</a><br>
-        If using more than one FHEMduino/CUN for covering a large area, sending
-        different events by the different FHEMduino's might disturb each other. This
-        phenomenon is also known as the Palm-Beach-Resort effect.
-        Putting them in a common sendpool will serialize sending the events.
-        E.g. if you have three CUN's, you have to specify following
-        attributes:<br>
-        attr CUN1 sendpool CUN1,CUN2,CUN3<br>
-        attr CUN2 sendpool CUN1,CUN2,CUN3<br>
-        attr CUN3 sendpool CUN1,CUN2,CUN3<br>
-        </li><br>
-    <li><a name="addvaltrigger">addvaltrigger</a><br>
-        Create triggers for additional device values. Right now these are RSSI
-        and RAWMSG for the FHEMduino family and RAWMSG for the FHZ.
-        </li><br>
-    <li><a name="rfmode">rfmode</a><br>
-        Configure the RF Transceiver of the FHEMduino (the CC1101). Available
-        arguments are:
-        <ul>
-        <li>SlowRF<br>
-            To communicate with FS20/FHT/HMS/EM1010/S300/Hoermann devices @1kHz
-            datarate. This is the default.</li>
-
-        <li>HomeMatic<br>
-            To communicate with HomeMatic type of devices @20kHz datarate</li>
-
-        <li>MAX<br>
-            To communicate with MAX! type of devices @20kHz datarate</li>
-
-        </ul>
-        </li><br>
-  
   </ul>
   <br>
 </ul>
