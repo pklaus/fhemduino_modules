@@ -12,12 +12,12 @@ use SetExtensions;
 
 my %codes = (
   "XMIToff" 		=> "off",
-  "XMITon" 			=> "on",
+  "XMITon"		=> "on",
   );
 
 my %elro_c2b;
 
-my $it_defrepetition = 3;   ## Default number of InterTechno Repetitions
+my $it_def_repetition = 10;   ## Default number of InterTechno Repetitions
 
 my $it_simple ="off on";
 my %models = (
@@ -44,7 +44,7 @@ sub FHEMduino_PT2262_Initialize($){ ############################################
   $hash->{UndefFn}   = "FHEMduino_PT2262_Undef";
   $hash->{AttrFn}    = "FHEMduino_PT2262_Attr";
   $hash->{ParseFn}   = "FHEMduino_PT2262_Parse";
-  $hash->{AttrList}  = "IODev ITrepetition do_not_notify:0,1 showtime:0,1 ignore:0,1 model:itremote,itswitch,itdimmer".
+  $hash->{AttrList}  = "IODev ITrepetition ITreceivetolerance ITbaseduration do_not_notify:0,1 showtime:0,1 ignore:0,1 model:itremote,itswitch,itdimmer".
   $readingFnAttributes;
 }
 
@@ -110,10 +110,22 @@ FHEMduino_PT2262_On_For_Timer($@)
 sub FHEMduino_PT2262_Define($$){ #######################################################
 
   my ($hash, $def) = @_;
+
+  Log3 $hash, 3, "Define: $def";
+
   my @a = split("[ \t][ \t]*", $def);
 
   my $name = $a[0];
+
   my $tristatecode = $a[2];
+  my $basedur = "350";
+
+  if (index($a[2], "_") != -1) {
+    ($tristatecode, $basedur) = split m/_/, $a[2], 2;
+  } else {
+    $tristatecode = $a[2];
+  }
+
   my $code = lc($tristatecode); 
 
   my $ontristate = "0F";
@@ -125,16 +137,21 @@ sub FHEMduino_PT2262_Define($$){ ###############################################
     $ontristate = $a[3];
     $offtristate = $a[4];
   }
+  elsif(int(@a) == 6) {
+    $basedur = $a[3];
+    $ontristate = $a[4];
+    $offtristate = $a[5];
+  }
   else {
     return "wrong syntax: define <name> FHEMduino_PT2262 <code>";
   }
 
-
   Log3 undef, 5, "Arraylenght:  int(@a)";
 
   $hash->{CODE} = $tristatecode;
-  $hash->{DEF} = $tristatecode . " " . $ontristate . " " . $offtristate;
+  $hash->{DEF} = $tristatecode. " " . $basedur . " " . $ontristate . " " . $offtristate;
   $hash->{XMIT} = lc($tristatecode);
+  $hash->{BDUR} = $basedur;
   
   Log3 $hash, 5, "Define hascode: {$tristatecode}{$name}";
   $modules{FHEMduino_PT2262}{defptr}{$tristatecode} = $hash;
@@ -156,6 +173,7 @@ sub FHEMduino_PT2262_Set($@){ ##################################################
   my $msg;
   my $hname = $hash->{NAME};
   my $name = $a[1];
+  my ($repChanged, $recChanged, $durChanged) = 0;
 
   return "no set value specified" if($na < 2 || $na > 3);
   
@@ -176,28 +194,21 @@ sub FHEMduino_PT2262_Set($@){ ##################################################
 
   if(!defined($c)) {
 
-   # Model specific set arguments
-   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"model"})) {
-     my $mt = $models{$attr{$a[0]}{"model"}};
-     return "Unknown argument $a[1], choose one of "
-     if($mt && $mt eq "sender");
-     return "Unknown argument $a[1], choose one of $it_simple"
-     if($mt && $mt eq "simple");
-   }
-   return "Unknown argument $a[1], choose one of " . join(" ", sort keys %elro_c2b);
- }
- my $io = $hash->{IODev};
-
- ## Do we need to change RFMode to SlowRF?? // Not implemented in fhemduino -> see fhemduino.pm
-  if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"switch_rfmode"})) {
-  	if ($attr{$a[0]}{"switch_rfmode"} eq "1") {			# do we need to change RFMode of IODev
-      my $ret = CallFn($io->{NAME}, "AttrFn", "set", ($io->{NAME}, "rfmode", "SlowRF"));
-    }	
+    # Model specific set arguments
+    if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"model"})) {
+      my $mt = $models{$attr{$a[0]}{"model"}};
+      return "Unknown argument $a[1], choose one of "
+      if($mt && $mt eq "sender");
+      return "Unknown argument $a[1], choose one of $it_simple"
+      if($mt && $mt eq "simple");
+    }
+    return "Unknown argument $a[1], choose one of " . join(" ", sort keys %elro_c2b);
   }
+  my $io = $hash->{IODev};
 
   ## Do we need to change ITrepetition ??	
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"ITrepetition"})) {
-  	$message = "isr".$attr{$a[0]}{"ITrepetition"};
+    $message = "ir".$attr{$a[0]}{"ITrepetition"};
     $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
     if ($msg =~ m/raw => $message/) {
  	  Log GetLogLevel($a[0],4), "FHEMduino_PT2262: Set ITrepetition: $message for $io->{NAME}";
@@ -206,20 +217,8 @@ sub FHEMduino_PT2262_Set($@){ ##################################################
     }
   }
 
-  ## Do we need to change ITfrequency ??	// Not implemented in fhemduino
- # if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"ITfrequency"})) {
- #   my $f = $attr{$a[0]}{"ITfrequency"}/26*65536;
- #   my $f2 = sprintf("%02x", $f / 65536);
- #   my $f1 = sprintf("%02x", int($f % 65536) / 256);
- #   my $f0 = sprintf("%02x", $f % 256);
- #   
- #   my $arg = sprintf("%.3f", (hex($f2)*65536+hex($f1)*256+hex($f0))/65536*26);
- #   Log GetLogLevel($a[0],4), "Setting ITfrequency (0D,0E,0F) to $f2 $f1 $f0 = $arg MHz";
- #   CUL_SimpleWrite($hash, "if$f2$f1$f0");
- # }
-
   my $v = join(" ", @a);
-  $message = "is".uc($hash->{XMIT}.$hash->{$c});
+  $message = "is".uc($hash->{XMIT}.$hash->{$c}.$hash->{BDUR});
 
   ## Log that we are going to switch InterTechno
   Log GetLogLevel($a[0],2), "FHEMduino_PT2262 set $v IO_name:$io->{NAME}";
@@ -236,7 +235,7 @@ sub FHEMduino_PT2262_Set($@){ ##################################################
 
   ## Do we need to change ITrepetition back??	
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"ITrepetition"})) {
-  	$message = "isr".$it_defrepetition;
+    $message = "ir".$it_def_repetition;
     $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
     if ($msg =~ m/raw => $message/) {
  	  Log GetLogLevel($a[0],4), "FHEMduino_PT2262: Set ITrepetition back: $message for $io->{NAME}";
@@ -390,20 +389,25 @@ sub FHEMduino_PT2262_Parse($$){ ################################################
   my $displayName = "";
   my $action = "";
   my $result = "";
+  my $basedur = "";
+  
+  ($msg, $basedur) = split m/_/, $msg, 2;
+
+  Log3 $hash, 3, "Message: $msg Basedur: $basedur";
 
   $result = getButton($hash,$msg);
 
   if ($result ne "") {
     ($displayName,$deviceCode,$action) = split m/ /, $result, 3;
 
-    Log3 $hash, 5, "Parse: Device: $displayName Action: $action";
+    Log3 $hash, 3, "Parse: Device: $displayName Code: $deviceCode Basedur: $basedur Action: $action";
 
     my $def = $modules{FHEMduino_PT2262}{defptr}{$hash->{NAME} . "." . $deviceCode};
     $def = $modules{FHEMduino_PT2262}{defptr}{$deviceCode} if(!$def);
 
     if(!$def) {
       Log3 $hash, 5, "UNDEFINED Remotebutton send to define: $displayName";
-      return "UNDEFINED FHEMduino_PT2262_$displayName FHEMduino_PT2262 $deviceCode"
+      return "UNDEFINED FHEMduino_PT2262_$displayName FHEMduino_PT2262 $deviceCode"."_".$basedur;
     }
 
     $hash = $def;
@@ -419,6 +423,7 @@ sub FHEMduino_PT2262_Parse($$){ ################################################
 
     readingsBeginUpdate($hash);
     readingsBulkUpdate($hash, "state", $action);
+    readingsBulkUpdate($hash, "basedur", $basedur);
     readingsEndUpdate($hash, 1);
     return $name;
   }
