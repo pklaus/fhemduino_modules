@@ -148,10 +148,7 @@ sub FHEMduino_PT2262_Define($$){ ###############################################
 
   Log3 undef, 5, "Arraylenght:  int(@a)";
 
-<<<<<<< HEAD
   $hash->{CODE} = $tristatecode;
-=======
->>>>>>> origin/trunk
   if ($basedur ne "") {
     $hash->{DEF} = $tristatecode. " " . $basedur . " " . $ontristate . " " . $offtristate;
     $hash->{BDUR} = $basedur;
@@ -160,12 +157,9 @@ sub FHEMduino_PT2262_Define($$){ ###############################################
   }
 
   $hash->{XMIT} = lc($tristatecode);
-<<<<<<< HEAD
   
-=======
- 
->>>>>>> origin/trunk
   Log3 $hash, 5, "Define hascode: {$tristatecode}{$name}";
+
   $modules{FHEMduino_PT2262}{defptr}{$tristatecode} = $hash;
   $hash->{$elro_c2b{"on"}}  = lc($ontristate);
   $hash->{$elro_c2b{"off"}} = lc($offtristate);
