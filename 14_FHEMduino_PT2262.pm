@@ -12,7 +12,7 @@ use SetExtensions;
 
 my %codes = (
   "XMIToff" 		=> "off",
-  "XMITon"		=> "on",
+  "XMITon" 			=> "on",
   );
 
 my %elro_c2b;
@@ -44,7 +44,7 @@ sub FHEMduino_PT2262_Initialize($){ ############################################
   $hash->{UndefFn}   = "FHEMduino_PT2262_Undef";
   $hash->{AttrFn}    = "FHEMduino_PT2262_Attr";
   $hash->{ParseFn}   = "FHEMduino_PT2262_Parse";
-  $hash->{AttrList}  = "IODev ITrepetition do_not_notify:0,1 showtime:0,1 ignore:0,1 model:itremote,itswitch,itdimmer".
+  $hash->{AttrList}  = "IODev ITrepetition ITreceivetolerance ITbaseduration do_not_notify:0,1 showtime:0,1 ignore:0,1 model:itremote,itswitch,itdimmer".
   $readingFnAttributes;
 }
 
@@ -118,7 +118,7 @@ sub FHEMduino_PT2262_Define($$){ ###############################################
   my $name = $a[0];
 
   my $tristatecode = $a[2];
-  my $basedur = "350";
+  my $basedur = "";
 
   if (index($a[2], "_") != -1) {
     ($tristatecode, $basedur) = split m/_/, $a[2], 2;
@@ -149,9 +149,14 @@ sub FHEMduino_PT2262_Define($$){ ###############################################
   Log3 undef, 5, "Arraylenght:  int(@a)";
 
   $hash->{CODE} = $tristatecode;
-  $hash->{DEF} = $tristatecode. " " . $basedur . " " . $ontristate . " " . $offtristate;
+  if ($basedur ne "") {
+    $hash->{DEF} = $tristatecode. " " . $basedur . " " . $ontristate . " " . $offtristate;
+    $hash->{BDUR} = $basedur;
+  } else {
+    $hash->{DEF} = $tristatecode. " " . $ontristate . " " . $offtristate;
+  }
+
   $hash->{XMIT} = lc($tristatecode);
-  $hash->{BDUR} = $basedur;
   
   Log3 $hash, 5, "Define hascode: {$tristatecode}{$name}";
   $modules{FHEMduino_PT2262}{defptr}{$tristatecode} = $hash;

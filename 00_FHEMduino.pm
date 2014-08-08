@@ -23,6 +23,10 @@ my %gets = (    # Name, Data to send to the FHEMduino, Regexp for the answer
   "raw"      => ["", '.*'],
   "uptime"   => ["t", '^[0-9A-F]{8}[\r\n]*$' ],
   "cmds"     => ["?", '.*Use one of[ 0-9A-Za-z]+[\r\n]*$' ],
+  "ITParms"  => ["ip",'.*' ],
+  "FAParms"  => ["fp", '.*' ],
+  "TCParms"  => ["dp", '.*' ],
+  "HXParms"  => ["hp", '.*' ]
 );
 
 #my %sets = (
@@ -35,7 +39,8 @@ my %gets = (    # Name, Data to send to the FHEMduino, Regexp for the answer
 
 my %sets = (
   "raw"       => "",
-  "flash"     => ""
+  "flash"     => "",
+  "reset"     => ""
 );
 
 my $clientsFHEMduino = ":IT:CUL_TX:OREGON:FHEMduino_Env:FHEMduino_EZ6:FHEMduino_Oregon:FHEMduino_PT2262:FHEMduino_FA20RF:FHEMduino_TCM:FHEMduino_HX:FHEMduino_DCF77:FHEMduino_Gas:";
@@ -176,22 +181,6 @@ FHEMduino_Set($@)
   return "\"set FHEMduino\" needs at least one parameter" if(@a < 2);
   return "Unknown argument $a[1], choose one of " . join(" ", sort keys %sets)
   	if(!defined($sets{$a[1]}));
-
-#  my $name = shift @a;
-#  my $type = shift @a;
-#  my $arg = join("", @a);
-
-#  return "This command is not valid in the current rfmode"
-#      if($sets{$type} && $sets{$type} ne AttrVal($name, "rfmode", "SlowRF"));
-
-   ###############################################  raw,led,patable
-
-#    return "Expecting a 0-padded hex number"
-#        if((length($arg)&1) == 1 && $type ne "raw");
-#    Log3 $name, 3, "set $name $type $arg";
-#    $arg = "l$arg" if($type eq "led");
-#    $arg = "x$arg" if($type eq "patable");
-#    FHEMduino_SimpleWrite($hash, $arg);
 
   my $name = shift @a;
   my $cmd = shift @a;
@@ -353,6 +342,18 @@ FHEMduino_Clear($)
 
 #####################################
 sub
+FHEMduino_ResetDevice($)
+{
+  my ($hash) = @_;
+
+  DevIo_CloseDev($hash);
+  my $ret = DevIo_OpenDev($hash, 0, "FHEMduino_DoInit");
+
+  return $ret;
+}
+
+#####################################
+sub
 FHEMduino_DoInit($)
 {
   my $hash = shift;
@@ -385,7 +386,12 @@ FHEMduino_DoInit($)
   $cmds =~ s/ //g;
   $hash->{CMDS} = $cmds;
   Log3 $name, 3, "$name: Possible commands: " . $hash->{CMDS};
-
+#  if( my $initCommandsString = AttrVal($name, "initCommands", undef) ) {
+#    my @initCommands = split(' ', $initCommandsString);
+#    foreach my $command (@initCommands) {
+#      FHEMduino_SimpleWrite($hash, $command);
+#    }
+#  }
   $hash->{STATE} = "Initialized";
 
   # Reset the counter

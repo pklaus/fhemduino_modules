@@ -204,7 +204,7 @@ sub FHEMduino_FA20RF_Set($@){ ##################################################
 
   ## Do we need to change FA20RFrepetition ??	
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"FA20RFrepetition"})) {
-  	$message = "sdr".$attr{$a[0]}{"FA20RFrepetition"};
+  	$message = "fr".$attr{$a[0]}{"FA20RFrepetition"};
     $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
     if ($msg =~ m/raw => $message/) {
  	  Log GetLogLevel($a[0],4), "FHEMduino_FA20RF: Set FA20RFrepetition: $message for $io->{NAME}";
@@ -214,7 +214,7 @@ sub FHEMduino_FA20RF_Set($@){ ##################################################
   }
 
   my $v = join(" ", @a);
-  $message = "sd".$hash->{XMIT};
+  $message = "fs".$hash->{XMIT};
 
   ## Log that we are going to switch InterTechno
   Log GetLogLevel($a[0],2), "FHEMduino_FA20RF set $v";
@@ -231,7 +231,7 @@ sub FHEMduino_FA20RF_Set($@){ ##################################################
 
   ## Do we need to change FArepetition back??	
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"FA20RFrepetition"})) {
-  	$message = "sdr".$fa20rf_defrepetition;
+  	$message = "fr".$fa20rf_defrepetition;
     $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
     if ($msg =~ m/raw => $message/) {
  	  Log GetLogLevel($a[0],4), "FHEMduino_FA20RF: Set FA20RFrepetition back: $message for $io->{NAME}";
@@ -384,7 +384,7 @@ hex2bin($)
     <code>define &lt;name&gt; FHEMduino_FA20RF &lt;code&gt; </code> <br>
 
     <br>
-    &lt;code&gt; ist der automatisch angelegte Hauscode des FA20RF. Dieser Ã¤ndern sich nach
+    &lt;code&gt; ist der automatisch angelegte Hauscode des FA20RF. Dieser ändern sich nach
 	dem Pairing mit einem Master.<br>
   </ul>
   <br>

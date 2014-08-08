@@ -92,7 +92,7 @@ FHEMduino_EZ6_Parse($$)
   $tmp = $sgn * (int($a[6].$a[7].$a[8])/10);
   $hum = int($a[9].$a[10].$a[11]);
   
-  $val = "T $tmp H $hum B $bat";
+  $val = "T: $tmp H: $hum B: $bat";
 	  
   if(!$val) {
     Log3 $name, 1, "FHEMduino_EZ6 Cannot decode $msg";
@@ -100,10 +100,16 @@ FHEMduino_EZ6_Parse($$)
   }
   Log3 $name, 4, "FHEMduino_EZ6 $name: $val";
 
+# TD = Taupunkttemperatur in °C 
+# AF = absolute Feuchte in g Wasserdampf pro m3 Luft 
+  my ($af, $td) = af_td($tmp, $hum);
+
   readingsBeginUpdate($hash);
   readingsBulkUpdate($hash, "state", $val);
   readingsBulkUpdate($hash, "temperature", $tmp);
   readingsBulkUpdate($hash, "humidity", $hum);
+  readingsBulkUpdate($hash, "taupunkttemp", $td);
+  readingsBulkUpdate($hash, "abshumidity", $af);
   readingsBulkUpdate($hash, "battery", $bat);
   readingsEndUpdate($hash, 1); # Notify is done by Dispatch
 
@@ -126,6 +132,50 @@ FHEMduino_EZ6_Attr(@)
   return undef;
 }
 
+sub
+af_td ($$)
+{
+# Formeln von http://www.wettermail.de/wetter/feuchte.html
+
+# r = relative Luftfeuchte
+# T = Temperatur in °C
+
+my ($T, $rh) = @_;
+
+# a = 7.5, b = 237.3 für T >= 0
+# a = 9.5, b = 265.5 für T < 0 über Eis (Frostpunkt)  
+        my $a = ($T > 0) ? 7.5 : 9.5;
+        my $b = ($T > 0) ? 237.3 : 265.5;
+
+# SDD = Sättigungsdampfdruck in hPa  
+# SDD(T) = 6.1078 * 10^((a*T)/(b+T))
+  my $SDD = 6.1078 * 10**(($a*$T)/($b+$T));
+# DD = Dampfdruck in hPa
+# DD(r,T) = r/100 * SDD(T)
+  my $DD  = $rh/100 * $SDD;  
+# AF(r,TK) = 10^5 * mw/R* * DD(r,T)/TK; AF(TD,TK) = 10^5 * mw/R* * SDD(TD)/TK
+# R* = 8314.3 J/(kmol*K) (universelle Gaskonstante)
+# mw = 18.016 kg (Molekulargewicht des Wasserdampfes)
+# TK = Temperatur in Kelvin (TK = T + 273.15)
+  my $AF  = (10**5) * (18.016 / 8314.3) * ($DD / (273.15 + $T));
+  my $af  = sprintf( "%.1f",$AF); # Auf eine Nachkommastelle runden
+
+ # TD(r,T) = b*v/(a-v) mit v(r,T) = log10(DD(r,T)/6.1078)  
+  my $v   =  log10($DD/6.1078);
+  my $TD  = $b*$v/($a-$v);
+  my $td  = sprintf( "%.1f",$TD); # Auf eine Nachkommastelle runden
+
+# TD = Taupunkttemperatur in °C 
+# AF = absolute Feuchte in g Wasserdampf pro m3 Luft 
+  return($af, $td);
+  
+}
+
+sub 
+log10 {
+        my $n = shift;
+        return log($n)/log(10);
+}
 
 1;
 

@@ -340,7 +340,7 @@ FHEMduino_Env_Parse($$)
   my ($af, $td);
   if ($hum >= 0) {
     $hash->{lastValues}{humidity} = $hum;
-    # TD = Taupunkttemperatur in Â°C 
+    # TD = Taupunkttemperatur in °C 
     # AF = absolute Feuchte in g Wasserdampf pro m3 Luft
     ($af, $td) = af_td($temp, $hum);
     $hash->{lastValues}{taupunkttemp} = $td;
@@ -395,16 +395,16 @@ af_td ($$)
 # Formeln von http://www.wettermail.de/wetter/feuchte.html
 
 # r = relative Luftfeuchte
-# T = Temperatur in Â°C
+# T = Temperatur in °C
 
 my ($T, $rh) = @_;
 
-# a = 7.5, b = 237.3 fÃ¼r T >= 0
-# a = 9.5, b = 265.5 fÃ¼r T < 0 Ã¼ber Eis (Frostpunkt)  
+# a = 7.5, b = 237.3 für T >= 0
+# a = 9.5, b = 265.5 für T < 0 über Eis (Frostpunkt)  
         my $a = ($T > 0) ? 7.5 : 9.5;
         my $b = ($T > 0) ? 237.3 : 265.5;
 
-# SDD = SÃ¤ttigungsdampfdruck in hPa  
+# SDD = Sättigungsdampfdruck in hPa  
 # SDD(T) = 6.1078 * 10^((a*T)/(b+T))
   my $SDD = 6.1078 * 10**(($a*$T)/($b+$T));
 # DD = Dampfdruck in hPa
@@ -422,7 +422,7 @@ my ($T, $rh) = @_;
   my $TD  = $b*$v/($a-$v);
   my $td  = sprintf( "%.1f",$TD); # Auf eine Nachkommastelle runden
 
-# TD = Taupunkttemperatur in Â°C 
+# TD = Taupunkttemperatur in °C 
 # AF = absolute Feuchte in g Wasserdampf pro m3 Luft 
   return($af, $td);
   
@@ -533,16 +533,16 @@ binflip($)
 
     <br>
     &lt;code&gt; ist der automatisch angelegte Hauscode des Env und besteht aus der
-	Kanalnummer (1..3) und einer Zufallsadresse, die durch das GerÃ¤t beim einlegen der
-	Batterie generiert wird (Die Adresse Ã¤ndert sich bei jedem Batteriewechsel).<br>
-    minsecs definert die Sekunden die mindesten vergangen sein mÃ¼ssen bis ein neuer
+	Kanalnummer (1..3) und einer Zufallsadresse, die durch das Gerät beim einlegen der
+	Batterie generiert wird (Die Adresse ändert sich bei jedem Batteriewechsel).<br>
+    minsecs definert die Sekunden die mindesten vergangen sein müssen bis ein neuer
 	Logeintrag oder eine neue Nachricht generiert werden.
     <br>
-	Z.B. wenn 300, werden EintrÃ¤ge nur alle 5 Minuten erzeugt, auch wenn das Device
-    alle paar Sekunden eine Nachricht generiert. (Reduziert die Log-DateigrÃ¶ÃŸe und die Zeit
-	die zur Anzeige von Plots benÃ¶tigt wird.)<br>
-	equalmsg gesetzt auf 1 legt fest, dass EintrÃ¤ge auch dann erzeugt werden wenn die durch
-	minsecs vorgegebene Zeit noch nicht verstrichen ist, sich aber der Nachrichteninhalt geÃ¤ndert
+	Z.B. wenn 300, werden Einträge nur alle 5 Minuten erzeugt, auch wenn das Device
+    alle paar Sekunden eine Nachricht generiert. (Reduziert die Log-Dateigröße und die Zeit
+	die zur Anzeige von Plots benötigt wird.)<br>
+	equalmsg gesetzt auf 1 legt fest, dass Einträge auch dann erzeugt werden wenn die durch
+	minsecs vorgegebene Zeit noch nicht verstrichen ist, sich aber der Nachrichteninhalt geändert
 	hat.
   </ul>
   <br>

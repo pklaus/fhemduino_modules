@@ -12,7 +12,7 @@ my %codes = (
 
 my %elro_c2b;
 
-my $fa20rf_defrepetition = 14;   ## Default number of TCM Repetitions
+my $TCM_defrepetition = 14;   ## Default number of TCM Repetitions
 
 my $fa20rf_simple ="off on";
 my %models = (
@@ -199,7 +199,7 @@ sub FHEMduino_TCM_Set($@){ #####################################################
 
   ## Do we need to change TCMrepetition ??	
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"TCMrepetition"})) {
-  	$message = "tcr".$attr{$a[0]}{"TCMrepetition"};
+  	$message = "dr".$attr{$a[0]}{"TCMrepetition"};
     $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
     if ($msg =~ m/raw => $message/) {
  	  Log GetLogLevel($a[0],4), "FHEMduino_TCM: Set TCMrepetition: $message for $io->{NAME}";
@@ -209,7 +209,7 @@ sub FHEMduino_TCM_Set($@){ #####################################################
   }
 
   my $v = join(" ", @a);
-  $message = "tc".$hash->{XMIT};
+  $message = "ds".$hash->{XMIT};
 
   ## Log that we are going to switch InterTechno
   Log GetLogLevel($a[0],2), "FHEMduino_TCM set $v";
@@ -226,7 +226,7 @@ sub FHEMduino_TCM_Set($@){ #####################################################
 
   ## Do we need to change FArepetition back??	
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"TCMrepetition"})) {
-  	$message = "sdr".$fa20rf_defrepetition;
+  	$message = "dr".$TCM_defrepetition;
     $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
     if ($msg =~ m/raw => $message/) {
  	  Log GetLogLevel($a[0],4), "FHEMduino_TCM: Set TCMrepetition back: $message for $io->{NAME}";
@@ -369,7 +369,7 @@ hex2bin($)
     <code>define &lt;name&gt; FHEMduino_TCM &lt;code&gt; </code> <br>
 
     <br>
-    &lt;code&gt; ist der automatisch angelegte Hauscode des TCM. Dieser Ã¤ndern sich nach
+    &lt;code&gt; ist der automatisch angelegte Hauscode des TCM. Dieser ändern sich nach
 	dem Pairing mit einem Master.<br>
   </ul>
   <br>

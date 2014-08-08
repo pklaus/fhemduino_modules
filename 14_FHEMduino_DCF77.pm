@@ -190,16 +190,16 @@ FHEMduino_DCF77_Attr(@)
 
     <br>
     &lt;code&gt; ist der automatisch angelegte Hauscode des DCF77 und besteht aus der
-	Kanalnummer (1..3) und einer Zufallsadresse, die durch das GerÃ¤t beim einlegen der
-	Batterie generiert wird (Die Adresse Ã¤ndert sich bei jedem Batteriewechsel).<br>
-    minsecs definert die Sekunden die mindesten vergangen sein mÃ¼ssen bis ein neuer
+	Kanalnummer (1..3) und einer Zufallsadresse, die durch das Gerät beim einlegen der
+	Batterie generiert wird (Die Adresse ändert sich bei jedem Batteriewechsel).<br>
+    minsecs definert die Sekunden die mindesten vergangen sein müssen bis ein neuer
 	Logeintrag oder eine neue Nachricht generiert werden.
     <br>
-	Z.B. wenn 300, werden EintrÃ¤ge nur alle 5 Minuten erzeugt, auch wenn das Device
-    alle paar Sekunden eine Nachricht generiert. (Reduziert die Log-DateigrÃ¶ÃŸe und die Zeit
-	die zur Anzeige von Plots benÃ¶tigt wird.)<br>
-	equalmsg gesetzt auf 1 legt fest, dass EintrÃ¤ge auch dann erzeugt werden wenn die durch
-	minsecs vorgegebene Zeit noch nicht verstrichen ist, sich aber der Nachrichteninhalt geÃ¤ndert
+	Z.B. wenn 300, werden Einträge nur alle 5 Minuten erzeugt, auch wenn das Device
+    alle paar Sekunden eine Nachricht generiert. (Reduziert die Log-Dateigröße und die Zeit
+	die zur Anzeige von Plots benötigt wird.)<br>
+	equalmsg gesetzt auf 1 legt fest, dass Einträge auch dann erzeugt werden wenn die durch
+	minsecs vorgegebene Zeit noch nicht verstrichen ist, sich aber der Nachrichteninhalt geändert
 	hat.
   </ul>
   <br>

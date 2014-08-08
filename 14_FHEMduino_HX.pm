@@ -10,7 +10,7 @@ use warnings;
   # 11001 => 3. Zirkusmusik
   # 11101 => 4. Banjo on my knee
   # 11110 => 5. Morgen kommt der Weihnachtsmann
-  # 10110 => 6. Itâ€™s a small world
+  # 10110 => 6. It’s a small world
   # 10010 => 7. Hundebellen
   # 10001 => 8. Westminster
 
@@ -29,7 +29,7 @@ my %codes = (
 
 my %elro_c2b;
 
-my $fa20rf_defrepetition = 14;   ## Default number of HX Repetitions
+my $hx_defrepetition = 14;   ## Default number of HX Repetitions
 
 my $fa20rf_simple ="off on";
 my %models = (
@@ -160,7 +160,7 @@ FHEMduino_HX_Define($$)
   $hash->{$elro_c2b{"hx3"}} = "11001";  # => 3. Zirkusmusik
   $hash->{$elro_c2b{"hx4"}} = "11101";  # => 4. Banjo on my knee
   $hash->{$elro_c2b{"hx5"}} = "11110";  # => 5. Morgen kommt der Weihnachtsmann
-  $hash->{$elro_c2b{"hx6"}} = "10110";  # => 6. Itâ€™s a small world
+  $hash->{$elro_c2b{"hx6"}} = "10110";  # => 6. It’s a small world
   $hash->{$elro_c2b{"hx7"}} = "10010";  # => 7. Hundebellen
   $hash->{$elro_c2b{"hx8"}} = "10001";  # => 8. Westminster
   $modules{FHEMduino_HX}{defptr}{$code}{$name} = $hash;
@@ -228,7 +228,7 @@ sub FHEMduino_HX_Set($@){ ######################################################
 
   ## Do we need to change HXrepetition ??	
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"HXrepetition"})) {
-  	$message = "hxr".$attr{$a[0]}{"HXrepetition"};
+  	$message = "hr".$attr{$a[0]}{"HXrepetition"};
     $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
     if ($msg =~ m/raw => $message/) {
  	  Log GetLogLevel($a[0],4), "FHEMduino_HX: Set HXrepetition: $message for $io->{NAME}";
@@ -238,7 +238,7 @@ sub FHEMduino_HX_Set($@){ ######################################################
   }
 
   my $v = join(" ", @a);
-  $message = "hx".$hash->{XMIT}."111".$hash->{$c};
+  $message = "hs".$hash->{XMIT}."111".$hash->{$c};
 
   ## Log that we are going to switch InterTechno
   Log GetLogLevel($a[0],2), "FHEMduino_HX set $v IO_Name:$io->{NAME} CMD:$a[1] CODE:$c";
@@ -253,9 +253,9 @@ sub FHEMduino_HX_Set($@){ ######################################################
     Log3 $hash, 5, "FHEMduino_HX: IODev device didn't answer is command correctly: $msg";
   }
 
-  ## Do we need to change FArepetition back??	
+  ## Do we need to change HXrepetition back??	
   if(defined($attr{$a[0]}) && defined($attr{$a[0]}{"HXrepetition"})) {
-  	$message = "sdr".$fa20rf_defrepetition;
+  	$message = "hr".$hx_defrepetition;
     $msg = CallFn($io->{NAME}, "GetFn", $io, (" ", "raw", $message));
     if ($msg =~ m/raw => $message/) {
  	  Log GetLogLevel($a[0],4), "FHEMduino_HX: Set HXrepetition back: $message for $io->{NAME}";
@@ -304,7 +304,7 @@ FHEMduino_HX_Parse($$)
   # 11001 => 3. Zirkusmusik
   # 11101 => 4. Banjo on my knee
   # 11110 => 5. Morgen kommt der Weihnachtsmann
-  # 10110 => 6. Itâ€™s a small world
+  # 10110 => 6. It’s a small world
   # 10010 => 7. Hundebellen
   # 10001 => 8. Westminster
   # 1111 111 11111
@@ -697,7 +697,7 @@ bin2dec($)
       hx3 => 3. Zirkusmusik<br>
       hx4 => 4. Banjo on my knee<br>
       hx5 => 5. Morgen kommt der Weihnachtsmann<br>
-      hx6 => 6. Itâ€™s a small world<br>
+      hx6 => 6. It’s a small world<br>
       hx7 => 7. Hundebellen<br>
       hx8 => 8. Westminster<br>
 
