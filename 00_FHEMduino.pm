@@ -23,6 +23,10 @@ my %gets = (    # Name, Data to send to the FHEMduino, Regexp for the answer
   "raw"      => ["", '.*'],
   "uptime"   => ["t", '^[0-9A-F]{8}[\r\n]*$' ],
   "cmds"     => ["?", '.*Use one of[ 0-9A-Za-z]+[\r\n]*$' ],
+  "ITParms"  => ["ip",'.*' ],
+  "FAParms"  => ["fp", '.*' ],
+  "TCParms"  => ["dp", '.*' ],
+  "HXParms"  => ["hp", '.*' ]
 );
 
 #my %sets = (
