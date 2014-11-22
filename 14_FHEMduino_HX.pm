@@ -10,7 +10,7 @@ use warnings;
   # 11001 => 3. Zirkusmusik
   # 11101 => 4. Banjo on my knee
   # 11110 => 5. Morgen kommt der Weihnachtsmann
-  # 10110 => 6. It’s a small world
+  # 10110 => 6. Itâ€™s a small world
   # 10010 => 7. Hundebellen
   # 10001 => 8. Westminster
 
@@ -53,7 +53,7 @@ FHEMduino_HX_Initialize($)
   $hash->{UndefFn}   = "FHEMduino_HX_Undef";
   $hash->{AttrFn}    = "FHEMduino_HX_Attr";
   $hash->{ParseFn}   = "FHEMduino_HX_Parse";
-  $hash->{AttrList}  = "IODev HXrepetition do_not_notify:0,1 showtime:0,1 ignore:0,1 model:HX,RM150RF,KD101".
+  $hash->{AttrList}  = "IODev HXrepetition do_not_notify:0,1 showtime:0,1 ignore:0,1 model:HX,RM150RF,KD101";
   $readingFnAttributes;
 }
 
@@ -160,7 +160,7 @@ FHEMduino_HX_Define($$)
   $hash->{$elro_c2b{"hx3"}} = "11001";  # => 3. Zirkusmusik
   $hash->{$elro_c2b{"hx4"}} = "11101";  # => 4. Banjo on my knee
   $hash->{$elro_c2b{"hx5"}} = "11110";  # => 5. Morgen kommt der Weihnachtsmann
-  $hash->{$elro_c2b{"hx6"}} = "10110";  # => 6. It’s a small world
+  $hash->{$elro_c2b{"hx6"}} = "10110";  # => 6. Itâ€™s a small world
   $hash->{$elro_c2b{"hx7"}} = "10010";  # => 7. Hundebellen
   $hash->{$elro_c2b{"hx8"}} = "10001";  # => 8. Westminster
   $modules{FHEMduino_HX}{defptr}{$code}{$name} = $hash;
@@ -304,7 +304,7 @@ FHEMduino_HX_Parse($$)
   # 11001 => 3. Zirkusmusik
   # 11101 => 4. Banjo on my knee
   # 11110 => 5. Morgen kommt der Weihnachtsmann
-  # 10110 => 6. It’s a small world
+  # 10110 => 6. Itâ€™s a small world
   # 10010 => 7. Hundebellen
   # 10001 => 8. Westminster
   # 1111 111 11111
@@ -697,7 +697,7 @@ bin2dec($)
       hx3 => 3. Zirkusmusik<br>
       hx4 => 4. Banjo on my knee<br>
       hx5 => 5. Morgen kommt der Weihnachtsmann<br>
-      hx6 => 6. It’s a small world<br>
+      hx6 => 6. Itâ€™s a small world<br>
       hx7 => 7. Hundebellen<br>
       hx8 => 8. Westminster<br>
 
