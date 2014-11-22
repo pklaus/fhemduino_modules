@@ -41,7 +41,7 @@ FHEMduino_FA20RF_Initialize($)
   $hash->{UndefFn}   = "FHEMduino_FA20RF_Undef";
   $hash->{AttrFn}    = "FHEMduino_FA20RF_Attr";
   $hash->{ParseFn}   = "FHEMduino_FA20RF_Parse";
-  $hash->{AttrList}  = "IODev FA20RFrepetition do_not_notify:0,1 showtime:0,1 ignore:0,1 model:FA20RF,RM150RF,KD101".
+  $hash->{AttrList}  = "IODev FA20RFrepetition do_not_notify:0,1 showtime:0,1 ignore:0,1 model:FA20RF,RM150RF,KD101";
   $readingFnAttributes;
 }
 
@@ -384,7 +384,7 @@ hex2bin($)
     <code>define &lt;name&gt; FHEMduino_FA20RF &lt;code&gt; </code> <br>
 
     <br>
-    &lt;code&gt; ist der automatisch angelegte Hauscode des FA20RF. Dieser ändern sich nach
+    &lt;code&gt; ist der automatisch angelegte Hauscode des FA20RF. Dieser Ã¤ndern sich nach
 	dem Pairing mit einem Master.<br>
   </ul>
   <br>
