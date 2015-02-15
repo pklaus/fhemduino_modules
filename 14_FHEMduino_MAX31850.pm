@@ -89,7 +89,7 @@ FHEMduino_MAX31850_Parse($$)
 
   $val = "T: $temperature";
 
-  if(!$val) {
+  if(!$val || $temperature < -270 || $temperature > 1768) {
     Log3 $name, 1, "FHEMduino_MAX31850 $deviceCode Cannot decode $msg";
     return "";
   }
