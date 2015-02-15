@@ -43,7 +43,7 @@ my %sets = (
   "reset"     => ""
 );
 
-my $clientsFHEMduino = ":IT:CUL_TX:OREGON:FHEMduino_Env:FHEMduino_EZ6:FHEMduino_Oregon:FHEMduino_PT2262:FHEMduino_FA20RF:FHEMduino_TCM:FHEMduino_HX:FHEMduino_DCF77:FHEMduino_Gas:";
+my $clientsFHEMduino = ":IT:CUL_TX:OREGON:FHEMduino_Env:FHEMduino_EZ6:FHEMduino_Oregon:FHEMduino_PT2262:FHEMduino_FA20RF:FHEMduino_TCM:FHEMduino_HX:FHEMduino_DCF77:FHEMduino_Gas:FHEMduino_MAX31850:";
 
 my %matchListFHEMduino = (
     "1:IT"                 => "^i......\$",
@@ -58,6 +58,7 @@ my %matchListFHEMduino = (
     "10:FHEMduino_DCF77"   => "D...............\$",
     "11:OREGON"            => "^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*",
     "12:FHEMduino_Gas"     => "G...........\$",      # Special Sketch needed. See GitHub GAS_I2C or FHEMWIKI
+    "13:FHEMduino_MAX31850"  => "y.........................\$",
 );
 
 sub
@@ -658,6 +659,11 @@ FHEMduino_Parse($$$$)
   }
   elsif($fn eq "O" && $len >= 2) {        # Oregon
     Log3 $name, 4, "OSVduino: $dmsg";
+  }
+  elsif($fn eq "y" && $len >= 26) {       # MAX31850
+    Log3 $name, 4, "MAX31850: $dmsg";
+  ### implement error checking here!
+  ;
   }
   else {
     DoTrigger($name, "UNKNOWNCODE $dmsg message length ($len)");
