@@ -99,7 +99,7 @@ FHEMduino_BMP183_Parse($$)
   
   $val = "T: $temperature P: $pressure P-NN: $pressureNN";
 
-  if(!$val) {
+  if(!$val || $pressure < 300. || $pressure > 1100.0) {
     Log3 $name, 1, "FHEMduino_BMP183 $deviceCode Cannot decode $msg";
     return "";
   }
