@@ -17,7 +17,7 @@ FHEMduino_MAX31850_Initialize($)
 {
   my ($hash) = @_;
 
-  $hash->{Match}     = "^P................";
+  $hash->{Match}     = "^y.........................";
   $hash->{DefFn}     = "FHEMduino_MAX31850_Define";
   $hash->{UndefFn}   = "FHEMduino_MAX31850_Undef";
   $hash->{AttrFn}    = "FHEMduino_MAX31850_Attr";
