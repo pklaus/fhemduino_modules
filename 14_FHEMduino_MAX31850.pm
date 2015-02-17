@@ -54,14 +54,15 @@ FHEMduino_MAX31850_Parse($$)
 {
   my ($hash,$msg) = @_;
   
-  # output format is "y IIIIIIIIIIIIIIII TTTTTTT"
+  # output format is "y IIIIIIIIIIIIIIII TTTTT F"
   #                   01234567890123456789012345
   #   I = 64-bit 1-wire ID
-  #   T = Signed temperature multiplied with 100
+  #   T = Signed temperature in C * 4
+  #   F = Fault bit of the MAX31850 (0/1)
   #
   # for example:
-  # y 3b532a18000000b4 +003175
-  #   64-bit 1-wire ID   +31.75 deg C
+  # y 3b532a18000000b4 +0127 0
+  #   64-bit 1-wire ID, +31.75 deg C, no fault
 
   my @a = split(" ", $msg);
 
@@ -80,12 +81,14 @@ FHEMduino_MAX31850_Parse($$)
   return "" if(IsIgnored($name));
   
   my $val = "";
-  my ($temperature);
+  my ($temperature, $fault);
 
   $temperature = sprintf(
     '%.' . AttrVal($hash->{NAME}, 'roundTemperatureDecimal', 1) . 'f',
-    int($a[2])/100.0
+    int($a[2])/4.0
   );
+
+  $fault = int($a[3]);
 
   $val = "T: $temperature";
 
@@ -95,12 +98,14 @@ FHEMduino_MAX31850_Parse($$)
   }
   $hash->{lastReceive} = time();
   $hash->{lastValues}{temperature} = $temperature;
+  $hash->{lastValues}{fault} = $fault;
 
   Log3 $name, 4, "FHEMduino_MAX31850 $name: $val";
 
   readingsBeginUpdate($hash);
   readingsBulkUpdate($hash, "state", $val);
   readingsBulkUpdate($hash, "temperature", $temperature);
+  readingsBulkUpdate($hash, "fault", $fault);
   readingsEndUpdate($hash, 1);
 
   return $name;
